@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  apache:
+    build: 
+      dockerfile: ./Dockerfile
+    environment:
+      - MYSQL_ROOT_PASSWORD=1234
+      - MYSQL_DATABASE=pr1
+      - MYSQL_USER=chriss
+      - MYSQL_PASSWORD=chriss1234
+    ports:
+      - 80:80
+    volumes:
+      - type: bind
+        source: ./app
+        target: /var/www/html
+  mysql:
+    image: mysql
+    ports:
+      - 3307:3306
+    volumes:
+      - type: volume
+        source: projet1
+        target: /var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=1234
+      - MYSQL_DATABASE=pr1
+      - MYSQL_USER=chriss
+      - MYSQL_PASSWORD=chriss1234
+volumes:
+  projet1: 

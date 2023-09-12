@@ -1,3 +1,45 @@
+<?php
+session_start();
+
+// Configuration de la base de données
+$host = 'db_container';  // Nom du container Docker de la base de données
+$db   = 'phpdev1';
+$user = 'your_username'; // Remplacez par votre nom d'utilisateur de la base de données
+$pass = 'your_password'; // Remplacez par votre mot de passe de la base de données
+$charset = 'utf8mb4';
+
+$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+$options = [
+    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    PDO::ATTR_EMULATE_PREPARES   => false,
+];
+
+try {
+    $pdo = new PDO($dsn, $user, $pass, $options);
+} catch (\PDOException $e) {
+    throw new \PDOException($e->getMessage(), (int)$e->getCode());
+}
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $email = $_POST['email'];
+    $password = $_POST['password'];
+
+    // Récupérer l'utilisateur par e-mail
+    $stmt = $pdo->prepare("SELECT * FROM Utilisateur WHERE email = ?");
+    $stmt->execute([$email]);
+    $user = $stmt->fetch();
+
+    if ($user && password_verify($password, $user['mot_de_passe'])) {
+        // Authentification réussie
+        $_SESSION['user_id'] = $user['user_id'];
+        $_SESSION['email'] = $user['email'];
+        header('Location: dashboard.php');
+    } else {
+        echo "E-mail ou mot de passe incorrect!";
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -17,7 +59,7 @@
     <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ml-auto">            
             <li class="nav-item">
-                <a class="nav-link" href="#">S'inscrire</a>
+                <a class="nav-link" href="signup.php">S'inscrire</a>
             </li>
         </ul>
     </div>
