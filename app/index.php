@@ -1,5 +1,4 @@
 <?php
-
 session_start();
 
 // Si l'utilisateur est déjà connecté, redirigez-le vers le tableau de bord
@@ -8,45 +7,50 @@ if (isset($_SESSION["user_id"])) {
     exit;
 }
 
+// Connexion à la base de données
+$conn = new PDO('mysql:host=mysql;dbname='. getenv('MYSQL_DATABASE'), getenv('MYSQL_USER'), getenv('MYSQL_PASSWORD'));
+$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
 // Vérification si le formulaire a été soumis
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = $_POST["email"];
-    $password = $_POST["password"];
+    $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
+    $password = filter_input(INPUT_POST, 'password', FILTER_SANITIZE_STRING);
 
-    // Connexion à la base de données
-    try {
-        $conn = new PDO('mysql:host=mysql;dbname='. getenv('MYSQL_DATABASE'), getenv('MYSQL_USER'), getenv('MYSQL_PASSWORD'));
-        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    // Vérification de l'utilisateur dans la base de données
+    $stmt = $conn->prepare("SELECT id, password FROM users WHERE email = ?");
+    $stmt->execute([$email]);
+    $user = $stmt->fetch();
 
-        // Vérification de l'utilisateur dans la base de données
-        $stmt = $conn->prepare("SELECT id, password FROM users WHERE email = ?");
-        $stmt->execute([$email]);
-        $user = $stmt->fetch();
-
-        if ($user && password_verify($password, $user["password"])) {
-            // L'utilisateur est authentifié
-            // Stockez l'ID de l'utilisateur dans la session
-            $_SESSION["user_id"] = $user["id"];
-            // Redirigez vers le tableau de bord
-            header("Location: dashboard.php");
-            exit;
-        } else {
-            echo "Adresse e-mail ou mot de passe incorrect!";
-            exit;
+    if ($user && password_verify($password, $user["password"])) {
+        // L'utilisateur est authentifié
+        $_SESSION["user_id"] = $user["id"];
+        
+        // Si "Se souvenir de moi" est coché
+        if (isset($_POST["rememberMe"])) {
+            setcookie("user_id", $user["id"], time() + (86400 * 30), "/");
         }
-    } catch (PDOException $e) {
-        echo "Erreur : " . $e->getMessage();
+        
+        header("Location: dashboard.php");
+        exit;
+    } else {
+        $error_message = "Adresse e-mail ou mot de passe incorrect!";
     }
+} elseif (isset($_COOKIE["user_id"])) {
+    $_SESSION["user_id"] = $_COOKIE["user_id"];
+    header("Location: dashboard.php");
+    exit;
 }
-?>
 
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Formulaire de Connexion</title>
-    <!-- Inclure les styles Bootstrap -->
+    <!-- Inclure les scripts Bootstrap -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js" defer></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" defer></script>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
 <body>
@@ -67,38 +71,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <div class="container mt-5">
     <h2>Formulaire de Connexion</h2>
+    <?php if (isset($error_message)) { echo "<div class='alert alert-danger mt-2' role='alert'>" . $error_message . "</div>"; } ?>
     <form action="#" method="POST">
-        <!-- Champ : Adresse e-mail -->
         <div class="form-group">
             <label for="email">Adresse e-mail</label>
             <input type="email" class="form-control" id="email" name="email" required>
         </div>
-
-        <!-- Champ : Mot de passe -->
         <div class="form-group">
             <label for="password">Mot de passe</label>
             <input type="password" class="form-control" id="password" name="password" required>
         </div>
-
-        <!-- Option : Se souvenir de moi -->
         <div class="form-group form-check">
             <input type="checkbox" class="form-check-input" id="rememberMe" name="rememberMe">
             <label class="form-check-label" for="rememberMe">Se souvenir de moi</label>
         </div>
-
-        <!-- Lien : Mot de passe oublié -->
         <div class="form-group">
-            <a href="#">Mot de passe oublié ?</a>
+            <a href="forgot_password.php">Mot de passe oublié ?</a>
         </div>
-
-        <!-- Bouton d'envoi -->
         <button type="submit" class="btn btn-primary">Se connecter</button>
     </form>
 </div>
-
-<!-- Inclure les scripts Bootstrap -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
 </body>
 </html>

@@ -9,7 +9,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Vérification si les mots de passe correspondent
     if ($password !== $password_repeat) {
-        echo "Les mots de passe ne correspondent pas!";
+        echo "<div class='alert alert-danger' role='alert'>Les mots de passe ne correspondent pas!</div>";
         exit;
     }
 
@@ -22,7 +22,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $stmt = $conn->prepare("SELECT email FROM users WHERE email = ?");
         $stmt->execute([$email]);
         if ($stmt->fetch()) {
-            echo "Cette adresse email existe déjà!";
+            echo "<div class='alert alert-danger' role='alert'>Cette adresse email existe déjà!</div>";
             exit;
         }
 
@@ -32,9 +32,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Insertion de l'utilisateur dans la base de données
         $stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, password) VALUES (?, ?, ?, ?)");
         $stmt->execute([$prenom, $nom, $email, $hashed_password]);
-        echo "Inscription réussie!";
+        echo "<div class='alert alert-success' role='alert' id='success-message'>Inscription réussie! Vous serez redirigé dans <span id='countdown'>3</span> secondes.</div>";
+        echo "<script>
+            function startCountdown() {
+                let countdown = 3;
+                const interval = setInterval(() => {
+                    if (countdown === 0) {
+                        document.getElementById('success-message').innerText = \"C'est parti!\";
+                        clearInterval(interval);
+                        setTimeout(() => {
+                            window.location.href = 'index.php';
+                        }, 1000);
+                    } else {
+                        document.getElementById('countdown').innerText = countdown;
+                        countdown--;
+                    }
+                }, 1000);
+            }
+            startCountdown();
+        </script>";
     } catch (PDOException $e) {
-        echo "Erreur : " . $e->getMessage();
+        echo "<div class='alert alert-danger' role='alert'>Erreur : " . $e->getMessage() . "</div>";
     }
 }
 ?>
@@ -46,7 +64,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Formulaire d'Inscription</title>
     <!-- Inclure les styles Bootstrap -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">       
+    <!-- Inclure les scripts Bootstrap -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js" defer></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" defer></script>
 </head>
 <body>
 
@@ -85,12 +106,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         <!-- Bouton d'envoi -->
         <button type="submit" class="btn btn-primary">S'inscrire</button>
-    </form>
+    </form><br><a href="index.php" class="btn btn-secondary mt-3">Retour à la connexion</a>
 </div>
-
-<!-- Inclure les scripts Bootstrap -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-
 </body>
 </html>
+

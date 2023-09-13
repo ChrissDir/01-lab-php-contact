@@ -8,6 +8,7 @@ if (!isset($_SESSION["user_id"])) {
 }
 
 $connected_user_id = $_SESSION["user_id"];
+$email_error = "";
 
 // Connexion à la base de données
 try {
@@ -24,14 +25,13 @@ try {
         $stmt = $conn->prepare("SELECT email FROM contacts WHERE email = ?");
         $stmt->execute([$email]);
         if ($stmt->fetch()) {
-            echo "Cette adresse email existe déjà!";
-            exit;
+            $email_error = "Cette adresse email existe déjà!";
+        } else {
+            // Insertion du contact dans la base de données
+            $stmt = $conn->prepare("INSERT INTO contacts (first_name, last_name, email, user_id) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$prenom, $nom, $email, $connected_user_id]);
+            echo "Contact ajouté avec succès!";
         }
-
-        // Insertion du contact dans la base de données
-        $stmt = $conn->prepare("INSERT INTO contacts (first_name, last_name, email, user_id) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$prenom, $nom, $email, $connected_user_id]);
-        echo "Contact ajouté avec succès!";
     }
 
     // Récupération des contacts de l'utilisateur connecté
@@ -52,6 +52,9 @@ try {
     <title>Tableau de Bord - Gestion des Contacts</title>
     <!-- Inclure les styles Bootstrap -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Inclure les scripts Bootstrap -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js" defer></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" defer></script>
 </head>
 <body>
 
@@ -75,7 +78,7 @@ try {
     <div class="row">
         <div class="col-md-6">
             <!-- Formulaire d'ajout de contact -->
-            <form>
+            <form action="#" method="POST">
                 <div class="form-group">
                     <label for="nom">Nom</label>
                     <input type="text" class="form-control" id="nom" name="nom" required>
@@ -87,6 +90,11 @@ try {
                 <div class="form-group">
                     <label for="email">Adresse e-mail</label>
                     <input type="email" class="form-control" id="email" name="email" required>
+                    <?php
+                    if ($email_error) {
+                        echo "<small class='text-danger'>$email_error</small>";
+                    }
+                    ?>
                 </div>
                 <button type="submit" class="btn btn-primary">Ajouter Contact</button>
             </form>
@@ -105,9 +113,6 @@ try {
     </div>
 </div>
 
-<!-- Inclure les scripts Bootstrap -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-
 </body>
 </html>
+
