@@ -2,7 +2,7 @@ version: '3.8'
 services:
   apache:
     build: 
-      dockerfile: ./Dockerfile
+      dockerfile: Dockerfile
     environment:
       - MYSQL_ROOT_PASSWORD=1234
       - MYSQL_DATABASE=pr1

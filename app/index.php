@@ -1,45 +1,45 @@
 <?php
+
 session_start();
 
-// Configuration de la base de données
-$host = 'db_container';  // Nom du container Docker de la base de données
-$db   = 'phpdev1';
-$user = 'your_username'; // Remplacez par votre nom d'utilisateur de la base de données
-$pass = 'your_password'; // Remplacez par votre mot de passe de la base de données
-$charset = 'utf8mb4';
-
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
-$options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    PDO::ATTR_EMULATE_PREPARES   => false,
-];
-
-try {
-    $pdo = new PDO($dsn, $user, $pass, $options);
-} catch (\PDOException $e) {
-    throw new \PDOException($e->getMessage(), (int)$e->getCode());
+// Si l'utilisateur est déjà connecté, redirigez-le vers le tableau de bord
+if (isset($_SESSION["user_id"])) {
+    header("Location: dashboard.php");
+    exit;
 }
 
+// Vérification si le formulaire a été soumis
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = $_POST['email'];
-    $password = $_POST['password'];
+    $email = $_POST["email"];
+    $password = $_POST["password"];
 
-    // Récupérer l'utilisateur par e-mail
-    $stmt = $pdo->prepare("SELECT * FROM Utilisateur WHERE email = ?");
-    $stmt->execute([$email]);
-    $user = $stmt->fetch();
+    // Connexion à la base de données
+    try {
+        $conn = new PDO('mysql:host=mysql;dbname='. getenv('MYSQL_DATABASE'), getenv('MYSQL_USER'), getenv('MYSQL_PASSWORD'));
+        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    if ($user && password_verify($password, $user['mot_de_passe'])) {
-        // Authentification réussie
-        $_SESSION['user_id'] = $user['user_id'];
-        $_SESSION['email'] = $user['email'];
-        header('Location: dashboard.php');
-    } else {
-        echo "E-mail ou mot de passe incorrect!";
+        // Vérification de l'utilisateur dans la base de données
+        $stmt = $conn->prepare("SELECT id, password FROM users WHERE email = ?");
+        $stmt->execute([$email]);
+        $user = $stmt->fetch();
+
+        if ($user && password_verify($password, $user["password"])) {
+            // L'utilisateur est authentifié
+            // Stockez l'ID de l'utilisateur dans la session
+            $_SESSION["user_id"] = $user["id"];
+            // Redirigez vers le tableau de bord
+            header("Location: dashboard.php");
+            exit;
+        } else {
+            echo "Adresse e-mail ou mot de passe incorrect!";
+            exit;
+        }
+    } catch (PDOException $e) {
+        echo "Erreur : " . $e->getMessage();
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
