@@ -9,14 +9,22 @@ if (!isset($_SESSION["user_id"])) {
 
 $connected_user_id = $_SESSION["user_id"];
 $email_error = "";
+$success_message = "";
 
 // Connexion à la base de données
 try {
     $conn = new PDO('mysql:host=mysql;dbname='. getenv('MYSQL_DATABASE'), getenv('MYSQL_USER'), getenv('MYSQL_PASSWORD'));
     $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
+    // Si une demande de suppression de contact est soumise
+    if (isset($_POST["delete_contact_id"])) {
+        $contact_id_to_delete = intval($_POST["delete_contact_id"]);
+        $stmt = $conn->prepare("DELETE FROM contacts WHERE id = ? AND user_id = ?");
+        $stmt->execute([$contact_id_to_delete, $connected_user_id]);
+    }
+
     // Si le formulaire d'ajout de contact est soumis
-    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["nom"])) {
         $nom = htmlspecialchars($_POST["nom"], ENT_QUOTES, 'UTF-8');
         $prenom = htmlspecialchars($_POST["prenom"], ENT_QUOTES, 'UTF-8');
         $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
@@ -30,12 +38,12 @@ try {
             // Insertion du contact dans la base de données
             $stmt = $conn->prepare("INSERT INTO contacts (first_name, last_name, email, user_id) VALUES (?, ?, ?, ?)");
             $stmt->execute([$prenom, $nom, $email, $connected_user_id]);
-            echo "Contact ajouté avec succès!";
+            $success_message = "Contact ajouté avec succès!";
         }
     }
 
     // Récupération des contacts de l'utilisateur connecté
-    $stmt = $conn->prepare("SELECT first_name, last_name, email FROM contacts WHERE user_id = ?");
+    $stmt = $conn->prepare("SELECT id, first_name, last_name, email FROM contacts WHERE user_id = ?");
     $stmt->execute([$connected_user_id]);
     $contacts = $stmt->fetchAll();
 
@@ -45,11 +53,13 @@ try {
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tableau de Bord - Gestion des Contacts</title>
+    <!-- Inclure jQuery -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <!-- Inclure les styles Bootstrap -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <!-- Inclure les scripts Bootstrap -->
@@ -100,6 +110,11 @@ try {
                     ?>
                 </div>
                 <button type="submit" class="btn btn-primary">Ajouter Contact</button>
+                <?php
+                if ($success_message) {
+                    echo "<div class='alert alert-success mt-3'>$success_message</div>";
+                }
+                ?>
             </form>
         </div>
         <div class="col-md-6">
@@ -108,7 +123,18 @@ try {
             <ul class="list-group">
                 <?php
                     foreach ($contacts as $contact) {
-                        echo "<li class='list-group-item'>{$contact['first_name']} {$contact['last_name']} - {$contact['email']}</li>";
+                        echo "<li class='list-group-item'>";
+                        echo "{$contact['first_name']} {$contact['last_name']} - {$contact['email']}";
+                        echo "<form method='post' class='d-inline-block ml-3 float-right'>";
+                        echo "<input type='hidden' name='delete_contact_id' value='{$contact['id']}'>";
+                        echo "<button type='submit' class='btn btn-link p-0 border-0'>";
+                        echo '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-trash" viewBox="0 0 20 20">';
+                        echo '  <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"/>';
+                        echo '  <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z"/>';
+                        echo '</svg>';
+                        echo "</button>";
+                        echo "</form>";
+                        echo "</li>";
                     }
                 ?>
             </ul>
@@ -117,5 +143,7 @@ try {
 </div>
 
 </body>
-</html>
+</html>                 
+
+
 
