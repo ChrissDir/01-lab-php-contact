@@ -122,7 +122,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         <!-- Bouton d'envoi -->
         <button type="submit" class="btn btn-primary">S'inscrire</button>
-    </form><br><a href="index.php" class="btn btn-secondary mt-3">Retour à la connexion</a>
+        <a href="index.php" class="ml-4" style="text-decoration: underline;">Je me connecte</a>
+    </form>
 </div>
 </body>
 </html>

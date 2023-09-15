@@ -28,10 +28,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             // Stocker ce token dans la base de données avec une date d'expiration
             // Envoyer un e-mail à l'utilisateur avec le lien de réinitialisation contenant le token
             // La logique d'envoi d'e-mail et de stockage du token doit être ajoutée ici
+            $message = "<div class='alert alert-success' role='alert'>Si cet e-mail est associé à un compte, un lien pour réinitialiser votre mot de passe vous a été envoyé !</div>";
+        } else {
+            $message = "<div class='alert alert-info' role='alert'>Si cet e-mail est associé à un compte, un lien pour réinitialiser votre mot de passe vous a été envoyé !</div>";
         }
-        echo "Si cet e-mail est associé à un compte, un lien pour réinitialiser votre mot de passe vous a été envoyé.";
     } catch (PDOException $e) {
-        echo "<div class='alert alert-danger' role='alert'>Erreur : " . $e->getMessage() . "</div>";
+        $message = "<div class='alert alert-danger' role='alert'>Erreur : " . $e->getMessage() . "</div>";
     }
 }
 ?>
@@ -49,7 +51,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </head>
 <body>
 <div class="container mt-5">
-    <h2>Réinitialiser votre mot de passe</h2>
+    <div class="d-flex justify-content-between">
+        <h2>Réinitialiser votre mot de passe</h2>
+        <a href="index.php" class="btn btn-primary">Retour au formulaire de connexion</a>
+    </div>
     <form action="forgot_password.php" method="POST">
         <!-- Champ caché pour le jeton CSRF -->
         <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
@@ -58,6 +63,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <label for="email">Entrez votre adresse e-mail</label>
             <input type="email" class="form-control" id="email" name="email" required>
         </div>
+        <?php
+        if (!empty($message)) {
+            echo $message;
+        } ?>
         <button type="submit" class="btn btn-primary">Réinitialiser le mot de passe</button>
     </form>
 </div>
