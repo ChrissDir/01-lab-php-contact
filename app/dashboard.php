@@ -17,9 +17,9 @@ try {
 
     // Si le formulaire d'ajout de contact est soumis
     if ($_SERVER["REQUEST_METHOD"] == "POST") {
-        $nom = $_POST["nom"];
-        $prenom = $_POST["prenom"];
-        $email = $_POST["email"];
+        $nom = htmlspecialchars($_POST["nom"], ENT_QUOTES, 'UTF-8');
+        $prenom = htmlspecialchars($_POST["prenom"], ENT_QUOTES, 'UTF-8');
+        $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
 
         // Vérification si l'email du contact existe déjà
         $stmt = $conn->prepare("SELECT email FROM contacts WHERE email = ?");
@@ -87,6 +87,9 @@ try {
                     <label for="prenom">Prénom</label>
                     <input type="text" class="form-control" id="prenom" name="prenom" required>
                 </div>
+
+                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+
                 <div class="form-group">
                     <label for="email">Adresse e-mail</label>
                     <input type="email" class="form-control" id="email" name="email" required>

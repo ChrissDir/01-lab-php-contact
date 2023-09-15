@@ -1,6 +1,11 @@
 <?php
 session_start();
 
+// Génération du jeton CSRF s'il n'existe pas
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 // Si l'utilisateur est déjà connecté, redirigez-le vers le tableau de bord
 if (isset($_SESSION["user_id"])) {
     header("Location: dashboard.php");
@@ -13,8 +18,13 @@ $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
 // Vérification si le formulaire a été soumis
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Vérification du jeton CSRF
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        die('Invalid CSRF token');
+    }
+
     $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
-    $password = filter_input(INPUT_POST, 'password', FILTER_SANITIZE_STRING);
+    $password = htmlspecialchars($_POST["password"], ENT_QUOTES, 'UTF-8');
 
     // Vérification de l'utilisateur dans la base de données
     $stmt = $conn->prepare("SELECT id, password FROM users WHERE email = ?");
@@ -71,7 +81,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <div class="container mt-5">
     <h2>Formulaire de Connexion</h2>
-    <?php if (isset($error_message)) { echo "<div class='alert alert-danger mt-2' role='alert'>" . $error_message . "</div>"; } ?>
+    <?php
+    // Afficher le message flash s'il existe
+    if (isset($_SESSION['flash_message'])) {
+        echo "<div class='alert alert-success mt-2' role='alert'>" . $_SESSION['flash_message'] . "</div>";
+        unset($_SESSION['flash_message']); // Supprimer le message flash pour qu'il ne s'affiche qu'une seule fois
+    }
+
+    // Afficher le message d'erreur s'il existe
+    if (isset($error_message)) {
+        echo "<div class='alert alert-danger mt-2' role='alert'>" . $error_message . "</div>";
+    }
+    ?>
     <form action="#" method="POST">
         <div class="form-group">
             <label for="email">Adresse e-mail</label>
@@ -81,6 +102,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <label for="password">Mot de passe</label>
             <input type="password" class="form-control" id="password" name="password" required>
         </div>
+
+        <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+
         <div class="form-group form-check">
             <input type="checkbox" class="form-check-input" id="rememberMe" name="rememberMe">
             <label class="form-check-label" for="rememberMe">Se souvenir de moi</label>

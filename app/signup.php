@@ -1,11 +1,23 @@
 <?php
+session_start();
+
+// Génération du jeton CSRF s'il n'existe pas
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 // Vérification si le formulaire a été soumis
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $prenom = $_POST["prenom"];
-    $nom = $_POST["nom"];
-    $email = $_POST["email"];
-    $password = $_POST["password"];
-    $password_repeat = $_POST["password_repeat"];
+    // Vérification du jeton CSRF
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        die('Invalid CSRF token');
+    }
+
+    $prenom = htmlspecialchars($_POST["prenom"], ENT_QUOTES, 'UTF-8');
+    $nom = htmlspecialchars($_POST["nom"], ENT_QUOTES, 'UTF-8');
+    $password = htmlspecialchars($_POST["password"], ENT_QUOTES, 'UTF-8');
+    $password_repeat = htmlspecialchars($_POST["password_repeat"], ENT_QUOTES, 'UTF-8');
+    $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
 
     // Vérification si les mots de passe correspondent
     if ($password !== $password_repeat) {
@@ -91,6 +103,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <label for="email">Adresse e-mail</label>
             <input type="email" class="form-control" id="email" name="email" required>
         </div>
+
+        <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
 
         <!-- Champ : Mot de passe -->
         <div class="form-group">
