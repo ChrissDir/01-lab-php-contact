@@ -1,4 +1,8 @@
 <?php
+// Protége contre les attaques de type cross-site scripting (XSS)
+header('Content-Security-Policy: default-src \'self\'; script-src \'self\' https://code.jquery.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com; style-src \'self\' https://maxcdn.bootstrapcdn.com; img-src \'self\';');
+// Protection contre le clickjacking, empêche les iframes
+header('X-Frame-Options: DENY');
 session_start();
 
 // Génération du jeton CSRF s'il n'existe pas
@@ -19,54 +23,42 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $password_repeat = htmlspecialchars($_POST["password_repeat"], ENT_QUOTES, 'UTF-8');
     $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
 
-    // Vérification si les mots de passe correspondent
-    if ($password !== $password_repeat) {
-        echo "<div class='alert alert-danger' role='alert'>Les mots de passe ne correspondent pas!</div>";
-        exit;
+    // Vérification de la longueur minimale du mot de passe
+    if (strlen($password) < 8) {
+        $error_message = "Le mot de passe doit comporter au moins 8 caractères!";
     }
+    // Vérification si les mots de passe correspondent
+    elseif ($password !== $password_repeat) {
+        $error_message = "Les mots de passe ne correspondent pas!";
+    } else {
+        // Connexion à la base de données
+        try {
+            $conn = new PDO('mysql:host=mysql;dbname='. getenv('MYSQL_DATABASE'), getenv('MYSQL_USER'), getenv('MYSQL_PASSWORD'));
+            $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // Connexion à la base de données
-    try {
-        $conn = new PDO('mysql:host=mysql;dbname='. getenv('MYSQL_DATABASE'), getenv('MYSQL_USER'), getenv('MYSQL_PASSWORD'));
-        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            // Vérification si l'email existe déjà
+            $stmt = $conn->prepare("SELECT email FROM users WHERE email = ?");
+            $stmt->execute([$email]);
+            if ($stmt->fetch()) {
+                $error_message = "L'inscription a échoué. Veuillez réessayer.";
+            } else {
+                // Cryptage du mot de passe
+                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
-        // Vérification si l'email existe déjà
-        $stmt = $conn->prepare("SELECT email FROM users WHERE email = ?");
-        $stmt->execute([$email]);
-        if ($stmt->fetch()) {
-            echo "<div class='alert alert-danger' role='alert'>Cette adresse email existe déjà!</div>";
-            exit;
-        }
-
-        // Cryptage du mot de passe
-        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-
-        // Insertion de l'utilisateur dans la base de données et ajout d'une fonction pour intégrer un cooldown lorsqu'une inscription est réussie
-        $stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, password) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$prenom, $nom, $email, $hashed_password]);
-        echo "<div class='alert alert-success' role='alert' id='success-message'>Inscription réussie! Vous serez redirigé dans <span id='countdown'>3</span> secondes.</div>";
-        echo "<script>
-            function startCountdown() {
-                let countdown = 3;
-                const interval = setInterval(() => {
-                    if (countdown === 0) {
-                        document.getElementById('success-message').innerText = \"C'est parti!\";
-                        clearInterval(interval);
-                        setTimeout(() => {
-                            window.location.href = 'index.php';
-                        }, 1000);
-                    } else {
-                        document.getElementById('countdown').innerText = countdown;
-                        countdown--;
-                    }
-                }, 1000);
+                // Insertion de l'utilisateur dans la base de données
+                $stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, password) VALUES (?, ?, ?, ?)");
+                $stmt->execute([$prenom, $nom, $email, $hashed_password]);
+                $success_message = "Inscription réussie! Vous serez redirigé dans <span id='countdown'>3</span> secondes.";
             }
-            startCountdown();
-        </script>";
-    } catch (PDOException $e) {
-        echo "<div class='alert alert-danger' role='alert'>Erreur : " . $e->getMessage() . "</div>";
+        } catch (PDOException $e) {
+            $error_message = "Erreur : " . $e->getMessage();
+        }
     }
 }
+
+// En-têtes de sécurité
+header("Content-Security-Policy: default-src 'self'; script-src 'self' code.jquery.com cdnjs.cloudflare.com maxcdn.bootstrapcdn.com; style-src 'self' maxcdn.bootstrapcdn.com;");
+header('X-Frame-Options: DENY');
 ?>
 
 <!DOCTYPE html>
@@ -87,23 +79,50 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <div class="container mt-5">
     <h2>Formulaire d'Inscription</h2>
+    <?php
+    // Afficher le message d'erreur s'il existe
+    if (isset($error_message)) {
+        echo "<div class='alert alert-danger mt-2' role='alert'>" . $error_message . "</div>";
+    }
+    if (isset($success_message)) {
+        echo "<div class='alert alert-success mt-2' role='alert' id='success-message'>" . $success_message . "</div>";
+        echo "<script>
+            function startCountdown() {
+                let countdown = 3;
+                const interval = setInterval(() => {
+                    if (countdown === 0) {
+                        document.getElementById('success-message').innerText = \"C'est parti!\";
+                        clearInterval(interval);
+                        setTimeout(() => {
+                            window.location.href = 'index.php';
+                        }, 1000);
+                    } else {
+                        document.getElementById('countdown').innerText = countdown;
+                        countdown--;
+                    }
+                }, 1000);
+            }
+            startCountdown();
+        </script>";
+    }
+    ?>
     <form action="#" method="POST">
         <!-- Champ : Prénom -->
         <div class="form-group">
             <label for="prenom">Prénom</label>
-            <input type="text" class="form-control" id="prenom" name="prenom" required>
+            <input type="text" class="form-control" id="prenom" name="prenom" value="<?php echo isset($prenom) ? $prenom : ''; ?>" required>
         </div>
 
         <!-- Champ : Nom -->
         <div class="form-group">
             <label for="nom">Nom</label>
-            <input type="text" class="form-control" id="nom" name="nom" required>
+            <input type="text" class="form-control" id="nom" name="nom" value="<?php echo isset($nom) ? $nom : ''; ?>" required>
         </div>
 
         <!-- Champ : Adresse e-mail -->
         <div class="form-group">
             <label for="email">Adresse e-mail</label>
-            <input type="email" class="form-control" id="email" name="email" required>
+            <input type="email" class="form-control" id="email" name="email" value="<?php echo isset($email) ? $email : ''; ?>" required>
         </div>
 
         <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
@@ -127,4 +146,3 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </div>
 </body>
 </html>
-

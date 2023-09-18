@@ -1,4 +1,8 @@
 <?php
+// Protége contre les attaques de type cross-site scripting (XSS)
+header('Content-Security-Policy: default-src \'self\'; script-src \'self\' https://code.jquery.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com; style-src \'self\' https://maxcdn.bootstrapcdn.com; img-src \'self\';');
+// Protection contre le clickjacking, empêche les iframes
+header('X-Frame-Options: DENY');
 session_start();
 
 // Génération du jeton CSRF s'il n'existe pas
@@ -53,7 +57,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <div class="container mt-5">
     <div class="d-flex justify-content-between">
         <h2>Réinitialiser votre mot de passe</h2>
-        <a href="index.php" class="btn btn-primary">Retour au formulaire de connexion</a>
+        <a href="index.php" class="btn btn-secondary">Retour</a>
     </div>
     <form action="forgot_password.php" method="POST">
         <!-- Champ caché pour le jeton CSRF -->

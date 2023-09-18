@@ -1,5 +1,18 @@
 <?php
+
 session_start();
+
+// Durée d'inactivité avant déconnexion (en secondes). Ici, 30 minutes.
+$timeout_duration = 1800;
+
+if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY'] > $timeout_duration)) {
+    // Si l'utilisateur est inactif depuis plus de 30 minutes, l'envoie vers logout.php
+    header("Location: logout.php");
+    exit;
+}
+
+// Mettez à jour le dernier timestamp d'activité
+$_SESSION['LAST_ACTIVITY'] = time();
 
 // Si l'utilisateur n'est pas connecté, redirigez-le vers la page de connexion
 if (!isset($_SESSION["user_id"])) {
@@ -16,22 +29,21 @@ try {
     $conn = new PDO('mysql:host=mysql;dbname='. getenv('MYSQL_DATABASE'), getenv('MYSQL_USER'), getenv('MYSQL_PASSWORD'));
     $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // Si une demande de suppression de contact est soumise
-    if (isset($_POST["delete_contact_id"])) {
-        $contact_id_to_delete = intval($_POST["delete_contact_id"]);
-        $stmt = $conn->prepare("DELETE FROM contacts WHERE id = ? AND user_id = ?");
-        $stmt->execute([$contact_id_to_delete, $connected_user_id]);
-    }
+        // Si une demande de suppression de contact est soumise
+        if (isset($_POST["delete_contact_id"])) {
+            $contact_id_to_delete = intval($_POST["delete_contact_id"]);
+            $stmt = $conn->prepare("DELETE FROM contacts WHERE id = ? AND user_id = ?");
+            $stmt->execute([$contact_id_to_delete, $connected_user_id]);
+        }
 
-    // Si le formulaire d'ajout de contact est soumis
-    if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["nom"])) {
-        $nom = htmlspecialchars($_POST["nom"], ENT_QUOTES, 'UTF-8');
-        $prenom = htmlspecialchars($_POST["prenom"], ENT_QUOTES, 'UTF-8');
-        $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
-
+        // Si le formulaire d'ajout de contact est soumis
+        if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["nom"])) {
+            $nom = htmlspecialchars($_POST["nom"], ENT_QUOTES, 'UTF-8');
+            $prenom = htmlspecialchars($_POST["prenom"], ENT_QUOTES, 'UTF-8');
+            $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
         // Vérification si l'email du contact existe déjà
-        $stmt = $conn->prepare("SELECT email FROM contacts WHERE email = ?");
-        $stmt->execute([$email]);
+            $stmt = $conn->prepare("SELECT email FROM contacts WHERE email = ?");
+            $stmt->execute([$email]);
         if ($stmt->fetch()) {
             $email_error = "Cette adresse email existe déjà!";
         } else {
@@ -50,6 +62,8 @@ try {
 } catch (PDOException $e) {
     echo "Erreur : " . $e->getMessage();
 }
+header('Content-Security-Policy: default-src \'self\'; script-src \'self\' https://code.jquery.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com; style-src \'self\' https://maxcdn.bootstrapcdn.com; img-src \'self\';');
+header('X-Frame-Options: DENY');
 ?>
 
 <!DOCTYPE html>
@@ -108,17 +122,16 @@ try {
                         echo "<small class='text-danger'>$email_error</small>";
                     }
                     ?>
+                    <?php
+                    if ($success_message) {
+                        echo "<div class='alert alert-success mt-3'>$success_message</div>";
+                    }
+                    ?>
                 </div>
                 <button type="submit" class="btn btn-primary">Ajouter Contact</button>
-                <?php
-                if ($success_message) {
-                    echo "<div class='alert alert-success mt-3'>$success_message</div>";
-                }
-                ?>
             </form>
         </div>
         <div class="col-md-6">
-            <!-- Liste des contacts -->
             <h3>Liste des Contacts</h3>
             <ul class="list-group">
                 <?php
@@ -129,8 +142,8 @@ try {
                         echo "<input type='hidden' name='delete_contact_id' value='{$contact['id']}'>";
                         echo "<button type='submit' class='btn btn-link p-0 border-0'>";
                         echo '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-trash" viewBox="0 0 20 20">';
-                        echo '  <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"/>';
-                        echo '  <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z"/>';
+                        echo '<path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"/>';
+                        echo '<path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z"/>';
                         echo '</svg>';
                         echo "</button>";
                         echo "</form>";
@@ -142,6 +155,27 @@ try {
     </div>
 </div>
 
+<script>
+    // Durée d'inactivité avant déconnexion (en millisecondes). Ici, 30 minutes.
+    var timeoutDuration = 1800000;
+    var timeout;
+
+    // Réinitialisez le délai d'expiration à chaque interaction de l'utilisateur
+    document.onmousemove = resetTimeout;
+    document.onkeypress = resetTimeout;
+
+    function logout() {
+        window.location.href = 'logout.php';
+    }
+
+    function resetTimeout() {
+        clearTimeout(timeout);
+        timeout = setTimeout(logout, timeoutDuration);
+    }
+
+    // Initialisez le délai d'expiration
+    resetTimeout();
+</script>
 </body>
 </html>                 
 

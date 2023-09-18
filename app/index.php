@@ -1,12 +1,6 @@
 <?php
 session_start();
 
-// Afficher le message flash s'il existe
-if (isset($_SESSION['flash_message'])) {
-    $flash_message = $_SESSION['flash_message'];
-    unset($_SESSION['flash_message']); // Supprimer le message flash pour qu'il ne s'affiche qu'une seule fois
-}
-
 // Génération du jeton CSRF s'il n'existe pas
 if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -19,13 +13,18 @@ if (isset($_SESSION["user_id"])) {
 }
 
 // Connexion à la base de données
-$conn = new PDO('mysql:host=mysql;dbname='. getenv('MYSQL_DATABASE'), getenv('MYSQL_USER'), getenv('MYSQL_PASSWORD'));
-$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+try {
+    $conn = new PDO('mysql:host=mysql;dbname='. getenv('MYSQL_DATABASE'), getenv('MYSQL_USER'), getenv('MYSQL_PASSWORD'));
+    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die('Database connection failed: ' . $e->getMessage());
+}
 
 // Vérification si le formulaire a été soumis
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Vérification du jeton CSRF
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        session_destroy();
         die('Invalid CSRF token');
     }
 
@@ -43,7 +42,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         
         // Si "Se souvenir de moi" est coché
         if (isset($_POST["rememberMe"])) {
-            setcookie("user_id", $user["id"], time() + (86400 * 30), "/");
+            setcookie("user_id", $user["id"], time() + (86400 * 30), "/", "", true, true);
         }
         
         header("Location: dashboard.php");
@@ -57,6 +56,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     exit;
 }
 
+// En-têtes de sécurité
+header("Content-Security-Policy: default-src 'self'; script-src 'self' code.jquery.com cdnjs.cloudflare.com maxcdn.bootstrapcdn.com; style-src 'self' maxcdn.bootstrapcdn.com;");
+header('X-Frame-Options: DENY');
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -90,12 +92,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <div class="container mt-5">
     <h2>Formulaire de Connexion</h2>
     <?php
-    // Afficher le message flash s'il existe
-    if (isset($flash_message)) {
-        echo "<div class='alert alert-success mt-2' role='alert'>" . $flash_message . "</div>";
-    }
-    ?>
-    <?php
     // Afficher le message d'erreur s'il existe
     if (isset($error_message)) {
         echo "<div class='alert alert-danger mt-2' role='alert'>" . $error_message . "</div>";
@@ -104,7 +100,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <form action="#" method="POST">
         <div class="form-group">
             <label for="email">Adresse e-mail</label>
-            <input type="email" class="form-control" id="email" name="email" required>
+            <input type="email" class="form-control" id="email" name="email" value="<?php echo isset($email) ? $email : ''; ?>" required>
         </div>
         <div class="form-group">
             <label for="password">Mot de passe</label>
