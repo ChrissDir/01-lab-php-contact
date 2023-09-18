@@ -13,6 +13,11 @@ if (ini_get("session.use_cookies")) {
     );
 }
 
+// Supprimer le cookie user_id pour interrompre aussi le choix du "se souvenir de moi"
+if (isset($_COOKIE["user_id"])) {
+    setcookie("user_id", "", time() - 3600, "/");
+}
+
 // Détruire la session
 session_destroy();
 
@@ -20,5 +25,4 @@ session_destroy();
 session_start(); 
 $_SESSION['flash_message'] = "Vous avez été déconnecté avec succès!";
 header("Location: index.php");
-exit;
 ?>

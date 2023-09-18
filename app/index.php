@@ -1,6 +1,12 @@
 <?php
 session_start();
 
+// Afficher le message flash s'il existe
+if (isset($_SESSION['flash_message'])) {
+    $flash_message = $_SESSION['flash_message'];
+    unset($_SESSION['flash_message']); // Supprimer le message flash pour qu'il ne s'affiche qu'une seule fois
+}
+
 // Génération du jeton CSRF s'il n'existe pas
 if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -85,11 +91,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <h2>Formulaire de Connexion</h2>
     <?php
     // Afficher le message flash s'il existe
-    if (isset($_SESSION['flash_message'])) {
-        echo "<div class='alert alert-success mt-2' role='alert'>" . $_SESSION['flash_message'] . "</div>";
-        unset($_SESSION['flash_message']); // Supprimer le message flash pour qu'il ne s'affiche qu'une seule fois
+    if (isset($flash_message)) {
+        echo "<div class='alert alert-success mt-2' role='alert'>" . $flash_message . "</div>";
     }
-
+    ?>
+    <?php
     // Afficher le message d'erreur s'il existe
     if (isset($error_message)) {
         echo "<div class='alert alert-danger mt-2' role='alert'>" . $error_message . "</div>";

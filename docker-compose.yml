@@ -14,6 +14,8 @@ services:
       - type: bind
         source: ./app
         target: /var/www/html
+    depends_on:
+      - mysql
   mysql:
     image: mysql
     ports:
@@ -22,6 +24,9 @@ services:
       - type: volume
         source: projet1
         target: /var/lib/mysql
+      - type: bind
+        source: ./mysql-init/
+        target: /docker-entrypoint-initdb.d/
     environment:
       - MYSQL_ROOT_PASSWORD=1234
       - MYSQL_DATABASE=pr1

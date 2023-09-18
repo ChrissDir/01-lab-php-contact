@@ -41,7 +41,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Cryptage du mot de passe
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
-        // Insertion de l'utilisateur dans la base de données
+        // Insertion de l'utilisateur dans la base de données et ajout d'une fonction pour intégrer un cooldown lorsqu'une inscription est réussie
         $stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, password) VALUES (?, ?, ?, ?)");
         $stmt->execute([$prenom, $nom, $email, $hashed_password]);
         echo "<div class='alert alert-success' role='alert' id='success-message'>Inscription réussie! Vous serez redirigé dans <span id='countdown'>3</span> secondes.</div>";
