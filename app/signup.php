@@ -1,19 +1,7 @@
 <?php
-// En-têtes de sécurité
-$nonce = generateNonce();
-header("Content-Security-Policy: default-src 'self'; script-src 'self' https://code.jquery.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com 'nonce-$nonce'; style-src 'self' https://maxcdn.bootstrapcdn.com 'nonce-$nonce';");
-header('X-Frame-Options: DENY');
-header('X-Content-Type-Options: nosniff');
 session_start();
 
-// Génération du jeton CSRF s'il n'existe pas
-initializeCSRFToken();
-
-// Vérification si le formulaire a été soumis
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    handleRegistrationForm();
-}
-
+// Fonctions
 function generateNonce() {
     return bin2hex(random_bytes(16));
 }
@@ -24,8 +12,12 @@ function initializeCSRFToken() {
     }
 }
 
+function sanitizeInput($input) {
+    return htmlspecialchars($input, ENT_QUOTES, 'UTF-8');
+}
+
 function handleRegistrationForm() {
-    global $error_message;
+    global $error_message, $success_message;
 
     // Vérification du jeton CSRF
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
@@ -39,27 +31,16 @@ function handleRegistrationForm() {
     $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
 
     // Vérification de la complexité du mot de passe
-    if (!isPasswordComplex($password)) {
+    if (!preg_match('/[A-Z]/', $password) || !preg_match('/[a-z]/', $password) || !preg_match('/[0-9]/', $password) || strlen($password) < 8) {
         $error_message = "Le mot de passe doit comporter au moins 8 caractères, dont une majuscule, une minuscule et un chiffre.";
+        return;
     }
+
     // Vérification si les mots de passe correspondent
-    elseif ($password !== $password_repeat) {
+    if ($password !== $password_repeat) {
         $error_message = "Les mots de passe ne correspondent pas!";
-    } else {
-        registerUser($prenom, $nom, $email, $password);
+        return;
     }
-}
-
-function sanitizeInput($input) {
-    return htmlspecialchars($input, ENT_QUOTES, 'UTF-8');
-}
-
-function isPasswordComplex($password) {
-    return preg_match('/[A-Z]/', $password) && preg_match('/[a-z]/', $password) && preg_match('/[0-9]/', $password) && strlen($password) >= 8;
-}
-
-function registerUser($prenom, $nom, $email, $password) {
-    global $error_message;
 
     // Connexion à la base de données
     try {
@@ -71,19 +52,34 @@ function registerUser($prenom, $nom, $email, $password) {
         $stmt->execute([$email]);
         if ($stmt->fetch()) {
             $error_message = "L'adresse e-mail est déjà utilisée.";
-        } else {
-            // Cryptage du mot de passe
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-
-            // Insertion de l'utilisateur dans la base de données
-            $stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, password) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$prenom, $nom, $email, $hashed_password]);
-            $success_message = "Inscription réussie! Vous serez redirigé dans <span id='countdown'>3</span> secondes.";
+            return;
         }
+
+        // Cryptage du mot de passe
+        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+
+        // Insertion de l'utilisateur dans la base de données
+        $stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, password) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$prenom, $nom, $email, $hashed_password]);
+        $success_message = "Inscription réussie! Vous serez redirigé dans <span id='countdown'>3</span> secondes.";
     } catch (PDOException $e) {
         error_log("Erreur lors de l'inscription : " . $e->getMessage()); // Log de l'erreur
         $error_message = "Une erreur est survenue. Veuillez réessayer plus tard.";
     }
+}
+
+// Génération d'un nonce pour la CSP
+$nonce = generateNonce();
+header("Content-Security-Policy: default-src 'self'; script-src 'self' https://code.jquery.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com 'nonce-$nonce'; style-src 'self' https://maxcdn.bootstrapcdn.com 'nonce-$nonce';");
+header('X-Frame-Options: DENY');
+header('X-Content-Type-Options: nosniff');
+
+// Génération du jeton CSRF s'il n'existe pas
+initializeCSRFToken();
+
+// Vérification si le formulaire a été soumis
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    handleRegistrationForm();
 }
 ?>
 
@@ -100,14 +96,11 @@ function registerUser($prenom, $nom, $email, $password) {
     <!-- Inclure les scripts Bootstrap -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js" defer></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" defer></script>
-    
 </head>
 <body>
-
 <div class="container mt-5">
     <h2>Formulaire d'Inscription</h2>
     <?php
-    // Afficher le message d'erreur s'il existe
     if (isset($error_message)) {
         echo "<div class='alert alert-danger mt-2' role='alert'>" . $error_message . "</div>";
     }
