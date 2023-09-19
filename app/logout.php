@@ -1,4 +1,7 @@
 <?php
+// Protection contre les attaques de type "Clickjacking"
+header('X-Frame-Options: DENY');
+
 session_start();
 
 // Supprimer toutes les variables de session
@@ -20,9 +23,6 @@ if (isset($_COOKIE["user_id"])) {
 
 // Détruire la session
 session_destroy();
-
-// Protection contre les attaques de type "Clickjacking"
-header('X-Frame-Options: DENY');
 
 // Rediriger vers index.php
 header("Location: index.php");

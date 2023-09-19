@@ -1,43 +1,58 @@
 <?php
 // Génération d'un nonce pour la CSP
 $nonce = bin2hex(random_bytes(16));
-header("Content-Security-Policy: default-src 'self'; script-src 'self' https://code.jquery.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com 'nonce-$nonce'; style-src 'self' https://maxcdn.bootstrapcdn.com 'nonce-$nonce'; img-src 'self' data:;");
-header('X-Frame-Options: DENY');
-header('X-Content-Type-Options: nosniff');
+
+// En-têtes de sécurité
+setSecurityHeaders($nonce);
 session_start();
 
-// Durée d'inactivité avant déconnexion (en secondes). Ici, 30 minutes.
-$timeout_duration = 1800;
+// Gestion de l'inactivité
+handleInactivity();
 
-if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY'] > $timeout_duration)) {
-    // Si l'utilisateur est inactif depuis plus de 30 minutes, l'envoie vers logout.php
-    header("Location: logout.php");
-    exit;
+// Gestion des contacts
+list($email_error, $success_message, $contacts) = manageContacts();
+
+function setSecurityHeaders($nonce) {
+    header("Content-Security-Policy: default-src 'self'; script-src 'self' https://code.jquery.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com 'nonce-$nonce'; style-src 'self' https://maxcdn.bootstrapcdn.com 'nonce-$nonce'; img-src 'self' data:;");
+    header('X-Frame-Options: DENY');
+    header('X-Content-Type-Options: nosniff');
 }
 
-// Mettez à jour le dernier timestamp d'activité
-$_SESSION['LAST_ACTIVITY'] = time();
-
-// Si l'utilisateur n'est pas connecté, redirigez-le vers la page de connexion
-if (!isset($_SESSION["user_id"])) {
-    header("Location: index.php");
-    exit;
+function handleInactivity() {
+    $timeout_duration = 1800;
+    if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY'] > $timeout_duration)) {
+        header("Location: logout.php");
+        exit;
+    }
+    $_SESSION['LAST_ACTIVITY'] = time();
+    if (!isset($_SESSION["user_id"])) {
+        header("Location: index.php");
+        exit;
+    }
 }
 
-$connected_user_id = $_SESSION["user_id"];
-$email_error = "";
-$success_message = "";
+function manageContacts() {
+    $email_error = "";
+    $success_message = "";
+    $contacts = [];
+    
+    $connected_user_id = $_SESSION["user_id"];
 
-// Connexion à la base de données
-try {
-    $conn = new PDO('mysql:host=mysql;dbname='. getenv('MYSQL_DATABASE'), getenv('MYSQL_USER'), getenv('MYSQL_PASSWORD'));
-    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    // Connexion à la base de données
+    try {
+        $conn = new PDO('mysql:host=mysql;dbname='. getenv('MYSQL_DATABASE'), getenv('MYSQL_USER'), getenv('MYSQL_PASSWORD'));
+        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
         // Si une demande de suppression de contact est soumise
         if (isset($_POST["delete_contact_id"])) {
             $contact_id_to_delete = intval($_POST["delete_contact_id"]);
             $stmt = $conn->prepare("DELETE FROM contacts WHERE id = ? AND user_id = ?");
             $stmt->execute([$contact_id_to_delete, $connected_user_id]);
+            if ($stmt->rowCount() > 0) {
+                $success_message = "Contact supprimé avec succès!";
+            } else {
+                $email_error = "Erreur lors de la suppression du contact!";
+            }
         }
 
         // Si le formulaire d'ajout de contact est soumis
@@ -45,28 +60,34 @@ try {
             $nom = htmlspecialchars($_POST["nom"], ENT_QUOTES, 'UTF-8');
             $prenom = htmlspecialchars($_POST["prenom"], ENT_QUOTES, 'UTF-8');
             $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
-        // Vérification si l'email du contact existe déjà
+            // Vérification si l'email du contact existe déjà
             $stmt = $conn->prepare("SELECT email FROM contacts WHERE email = ?");
             $stmt->execute([$email]);
-        if ($stmt->fetch()) {
-            $email_error = "Cette adresse email existe déjà!";
-        } else {
-            // Insertion du contact dans la base de données
-            $stmt = $conn->prepare("INSERT INTO contacts (first_name, last_name, email, user_id) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$prenom, $nom, $email, $connected_user_id]);
-            $success_message = "Contact ajouté avec succès!";
+            if ($stmt->fetch()) {
+                $email_error = "Cette adresse email existe déjà!";
+            } else {
+                // Insertion du contact dans la base de données
+                $stmt = $conn->prepare("INSERT INTO contacts (first_name, last_name, email, user_id) VALUES (?, ?, ?, ?)");
+                $stmt->execute([$prenom, $nom, $email, $connected_user_id]);
+                if ($stmt->rowCount() > 0) {
+                    $success_message = "Contact ajouté avec succès!";
+                } else {
+                    $email_error = "Erreur lors de l'ajout du contact!";
+                }
+            }
         }
+
+        // Récupération des contacts de l'utilisateur connecté
+        $stmt = $conn->prepare("SELECT id, first_name, last_name, email FROM contacts WHERE user_id = ?");
+        $stmt->execute([$connected_user_id]);
+        $contacts = $stmt->fetchAll();
+
+    } catch (PDOException $e) {
+        $email_error = "Erreur : " . $e->getMessage();
     }
-
-    // Récupération des contacts de l'utilisateur connecté
-    $stmt = $conn->prepare("SELECT id, first_name, last_name, email FROM contacts WHERE user_id = ?");
-    $stmt->execute([$connected_user_id]);
-    $contacts = $stmt->fetchAll();
-
-} catch (PDOException $e) {
-    echo "Erreur : " . $e->getMessage();
+    
+    return [$email_error, $success_message, $contacts];
 }
-
 ?>
 
 <!DOCTYPE html>
@@ -86,8 +107,8 @@ try {
 <body>
 <script nonce="<?php echo $nonce; ?>" defer>
     // Durée d'inactivité avant déconnexion (en millisecondes). Ici, 30 minutes.
-    var timeoutDuration = 1800000;
-    var timeout;
+    let timeoutDuration = 1800000;
+    let timeout;
 
     // Réinitialisez le délai d'expiration à chaque interaction de l'utilisateur
     document.onmousemove = resetTimeout;
@@ -104,6 +125,11 @@ try {
 
     // Initialisez le délai d'expiration
     resetTimeout();
+
+    // Fonction pour confirmer la suppression d'un contact
+    function confirmDelete() {
+        return confirm("Êtes-vous sûr de vouloir supprimer ce contact?");
+    }
 </script>
 <nav class="navbar navbar-expand-lg navbar-light bg-light">
     <a class="navbar-brand" href="#">Mon Tableau de Bord</a>
@@ -161,7 +187,7 @@ try {
                     foreach ($contacts as $contact) {
                         echo "<li class='list-group-item'>";
                         echo "{$contact['first_name']} {$contact['last_name']} - {$contact['email']}";
-                        echo "<form method='post' class='d-inline-block ml-3 float-right'>";
+                        echo "<form method='post' class='d-inline-block ml-3 float-right' onsubmit='return confirmDelete();'>";
                         echo "<input type='hidden' name='delete_contact_id' value='{$contact['id']}'>";
                         echo "<button type='submit' class='btn btn-link p-0 border-0'>";
                         echo '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-trash" viewBox="0 0 20 20">';
@@ -178,7 +204,4 @@ try {
     </div>
 </div>
 </body>
-</html>                 
-
-
-
+</html>           

@@ -1,60 +1,88 @@
 <?php
-// Génération d'un nonce pour la CSP
-$nonce = bin2hex(random_bytes(16));
+// En-têtes de sécurité
+$nonce = generateNonce();
 header("Content-Security-Policy: default-src 'self'; script-src 'self' https://code.jquery.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com 'nonce-$nonce'; style-src 'self' https://maxcdn.bootstrapcdn.com 'nonce-$nonce';");
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
 session_start();
 
 // Génération du jeton CSRF s'il n'existe pas
-if (!isset($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
+initializeCSRFToken();
 
 // Vérification si le formulaire a été soumis
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    handleRegistrationForm();
+}
+
+function generateNonce() {
+    return bin2hex(random_bytes(16));
+}
+
+function initializeCSRFToken() {
+    if (!isset($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+}
+
+function handleRegistrationForm() {
+    global $error_message;
+
     // Vérification du jeton CSRF
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
         die('Invalid CSRF token');
     }
 
-    $prenom = htmlspecialchars($_POST["prenom"], ENT_QUOTES, 'UTF-8');
-    $nom = htmlspecialchars($_POST["nom"], ENT_QUOTES, 'UTF-8');
-    $password = htmlspecialchars($_POST["password"], ENT_QUOTES, 'UTF-8');
-    $password_repeat = htmlspecialchars($_POST["password_repeat"], ENT_QUOTES, 'UTF-8');
+    $prenom = sanitizeInput($_POST["prenom"]);
+    $nom = sanitizeInput($_POST["nom"]);
+    $password = sanitizeInput($_POST["password"]);
+    $password_repeat = sanitizeInput($_POST["password_repeat"]);
     $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
 
     // Vérification de la complexité du mot de passe
-    if (!preg_match('/[A-Z]/', $password) || !preg_match('/[a-z]/', $password) || !preg_match('/[0-9]/', $password) || strlen($password) < 8) {
+    if (!isPasswordComplex($password)) {
         $error_message = "Le mot de passe doit comporter au moins 8 caractères, dont une majuscule, une minuscule et un chiffre.";
     }
     // Vérification si les mots de passe correspondent
     elseif ($password !== $password_repeat) {
         $error_message = "Les mots de passe ne correspondent pas!";
     } else {
-        // Connexion à la base de données
-        try {
-            $conn = new PDO('mysql:host=mysql;dbname='. getenv('MYSQL_DATABASE'), getenv('MYSQL_USER'), getenv('MYSQL_PASSWORD'));
-            $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        registerUser($prenom, $nom, $email, $password);
+    }
+}
 
-            // Vérification si l'email existe déjà
-            $stmt = $conn->prepare("SELECT email FROM users WHERE email = ?");
-            $stmt->execute([$email]);
-            if ($stmt->fetch()) {
-                $error_message = "L'adresse e-mail est déjà utilisée.";
-            } else {
-                // Cryptage du mot de passe
-                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+function sanitizeInput($input) {
+    return htmlspecialchars($input, ENT_QUOTES, 'UTF-8');
+}
 
-                // Insertion de l'utilisateur dans la base de données
-                $stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, password) VALUES (?, ?, ?, ?)");
-                $stmt->execute([$prenom, $nom, $email, $hashed_password]);
-                $success_message = "Inscription réussie! Vous serez redirigé dans <span id='countdown'>3</span> secondes.";
-            }
-        } catch (PDOException $e) {
-            error_log("Erreur lors de l'inscription : " . $e->getMessage()); // Log de l'erreur
-            $error_message = "Une erreur est survenue. Veuillez réessayer plus tard.";
+function isPasswordComplex($password) {
+    return preg_match('/[A-Z]/', $password) && preg_match('/[a-z]/', $password) && preg_match('/[0-9]/', $password) && strlen($password) >= 8;
+}
+
+function registerUser($prenom, $nom, $email, $password) {
+    global $error_message;
+
+    // Connexion à la base de données
+    try {
+        $conn = new PDO('mysql:host=mysql;dbname='. getenv('MYSQL_DATABASE'), getenv('MYSQL_USER'), getenv('MYSQL_PASSWORD'));
+        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        // Vérification si l'email existe déjà
+        $stmt = $conn->prepare("SELECT email FROM users WHERE email = ?");
+        $stmt->execute([$email]);
+        if ($stmt->fetch()) {
+            $error_message = "L'adresse e-mail est déjà utilisée.";
+        } else {
+            // Cryptage du mot de passe
+            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+
+            // Insertion de l'utilisateur dans la base de données
+            $stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, password) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$prenom, $nom, $email, $hashed_password]);
+            $success_message = "Inscription réussie! Vous serez redirigé dans <span id='countdown'>3</span> secondes.";
         }
+    } catch (PDOException $e) {
+        error_log("Erreur lors de l'inscription : " . $e->getMessage()); // Log de l'erreur
+        $error_message = "Une erreur est survenue. Veuillez réessayer plus tard.";
     }
 }
 ?>
@@ -146,7 +174,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             a.ml-4 {
                 text-decoration: underline;
             }
-        </style>
+    </style>
 </div>
 </body>
 </html>

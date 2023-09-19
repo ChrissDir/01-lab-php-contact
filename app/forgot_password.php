@@ -1,25 +1,41 @@
 <?php
-// Protége contre les attaques de type cross-site scripting (XSS)
-header('Content-Security-Policy: default-src \'self\'; script-src \'self\' https://code.jquery.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com; style-src \'self\' https://maxcdn.bootstrapcdn.com; img-src \'self\';');
-// Protection contre le clickjacking, empêche les iframes
-header('X-Frame-Options: DENY');
-header('X-Content-Type-Options: nosniff');
+// En-têtes de sécurité
+setSecurityHeaders();
 session_start();
 
 // Génération du jeton CSRF s'il n'existe pas
-if (!isset($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+initializeCSRFToken();
+
+// Traitement du formulaire
+$message = handleForm();
+
+function setSecurityHeaders() {
+    header('Content-Security-Policy: default-src \'self\'; script-src \'self\' https://code.jquery.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com; style-src \'self\' https://maxcdn.bootstrapcdn.com; img-src \'self\';');
+    header('X-Frame-Options: DENY');
+    header('X-Content-Type-Options: nosniff');
 }
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
+function initializeCSRFToken() {
+    if (!isset($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+}
+
+function handleForm() {
+    if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+        return;
+    }
+
     // Vérification du jeton CSRF
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
         die('Invalid CSRF token');
     }
 
     $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
+    return resetPassword($email);
+}
 
-    // Connexion à la base de données
+function resetPassword($email) {
     try {
         $conn = new PDO('mysql:host=mysql;dbname='. getenv('MYSQL_DATABASE'), getenv('MYSQL_USER'), getenv('MYSQL_PASSWORD'));
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -28,17 +44,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $stmt = $conn->prepare("SELECT email FROM users WHERE email = ?");
         $stmt->execute([$email]);
         if ($stmt->fetch()) {
-            // Générer un token unique pour la réinitialisation
-            $reset_token = bin2hex(random_bytes(32));
-            // Stocker ce token dans la base de données avec une date d'expiration
-            // Envoyer un e-mail à l'utilisateur avec le lien de réinitialisation contenant le token
-            // La logique d'envoi d'e-mail et de stockage du token doit être ajoutée ici
-            $message = "<div class='alert alert-success' role='alert'>Si cet e-mail est associé à un compte, un lien pour réinitialiser votre mot de passe vous a été envoyé !</div>";
+            // TODO: Ajoutez la logique de réinitialisation du mot de passe ici
+            return "<div class='alert alert-success' role='alert'>Si cet e-mail est associé à un compte, un lien pour réinitialiser votre mot de passe vous a été envoyé !</div>";
         } else {
-            $message = "<div class='alert alert-info' role='alert'>Si cet e-mail est associé à un compte, un lien pour réinitialiser votre mot de passe vous a été envoyé !</div>";
+            return "<div class='alert alert-info' role='alert'>Si cet e-mail est associé à un compte, un lien pour réinitialiser votre mot de passe vous a été envoyé !</div>";
         }
     } catch (PDOException $e) {
-        $message = "<div class='alert alert-danger' role='alert'>Erreur : " . $e->getMessage() . "</div>";
+        return "<div class='alert alert-danger' role='alert'>Erreur : " . $e->getMessage() . "</div>";
     }
 }
 ?>

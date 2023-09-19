@@ -17,29 +17,48 @@ if (isset($_SESSION["user_id"])) {
 }
 
 // Vérification des tentatives de connexion
-if (!isset($_SESSION['login_attempts'])) {
-    $_SESSION['login_attempts'] = 0;
-}
-if (!isset($_SESSION['last_attempt_time'])) {
-    $_SESSION['last_attempt_time'] = null;
-}
-
-$lockout_time = 600; // 10 minutes
-if ($_SESSION['login_attempts'] >= 5 && (time() - $_SESSION['last_attempt_time']) < $lockout_time) {
-    die('Trop de tentatives de connexion. Veuillez réessayer dans quelques minutes.');
-}
+initializeLoginAttempts();
 
 // Connexion à la base de données
-try {
-    $conn = new PDO('mysql:host=mysql;dbname='. getenv('MYSQL_DATABASE'), getenv('MYSQL_USER'), getenv('MYSQL_PASSWORD'));
-    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException $e) {
-    error_log('Database connection failed: ' . $e->getMessage());
-    die('Une erreur est survenue. Veuillez réessayer plus tard.');
-}
+$conn = connectToDatabase();
 
 // Vérification si le formulaire a été soumis
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    handleLoginForm($conn);
+} elseif (isset($_COOKIE["user_id"])) {
+    $_SESSION["user_id"] = $_COOKIE["user_id"];
+    header("Location: dashboard.php");
+    exit;
+}
+
+function initializeLoginAttempts() {
+    if (!isset($_SESSION['login_attempts'])) {
+        $_SESSION['login_attempts'] = 0;
+    }
+    if (!isset($_SESSION['last_attempt_time'])) {
+        $_SESSION['last_attempt_time'] = null;
+    }
+
+    $lockout_time = 600; // 10 minutes
+    if ($_SESSION['login_attempts'] >= 5 && (time() - $_SESSION['last_attempt_time']) < $lockout_time) {
+        die('Trop de tentatives de connexion. Veuillez réessayer dans quelques minutes.');
+    }
+}
+
+function connectToDatabase() {
+    try {
+        $conn = new PDO('mysql:host=mysql;dbname='. getenv('MYSQL_DATABASE'), getenv('MYSQL_USER'), getenv('MYSQL_PASSWORD'));
+        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        return $conn;
+    } catch (PDOException $e) {
+        error_log('Database connection failed: ' . $e->getMessage());
+        die('Une erreur est survenue. Veuillez réessayer plus tard.');
+    }
+}
+
+function handleLoginForm($conn) {
+    global $error_message;
+
     // Vérification du jeton CSRF
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
         session_destroy();
@@ -76,10 +95,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         error_log('Error while checking user: ' . $e->getMessage());
         $error_message = "Une erreur est survenue. Veuillez réessayer plus tard.";
     }
-} elseif (isset($_COOKIE["user_id"])) {
-    $_SESSION["user_id"] = $_COOKIE["user_id"];
-    header("Location: dashboard.php");
-    exit;
 }
 ?>
 <!DOCTYPE html>
