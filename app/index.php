@@ -1,6 +1,7 @@
 <?php
 // En-têtes de sécurité
-header("Content-Security-Policy: default-src 'self'; script-src 'self' code.jquery.com cdnjs.cloudflare.com maxcdn.bootstrapcdn.com; style-src 'self' maxcdn.bootstrapcdn.com; img-src 'self' data:;");
+header("Content-Security-Policy: default-src 'self'; script-src 'self' 'sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL' cdn.jsdelivr.net code.jquery.com cdnjs.cloudflare.com maxcdn.bootstrapcdn.com; style-src 'self' 'sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN' cdn.jsdelivr.net maxcdn.bootstrapcdn.com; img-src 'self' data:;");
+
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
 session_start();
@@ -97,6 +98,7 @@ function handleLoginForm($conn) {
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -105,57 +107,72 @@ function handleLoginForm($conn) {
     <title>Formulaire de Connexion</title>
     <!-- Inclure jQuery -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js" defer></script>
-    <!-- Inclure les scripts Bootstrap -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js" defer></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" defer></script>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-</head>
-<body>
+    <!-- Inclure le CSS de Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
 
-<nav class="navbar navbar-expand-lg navbar-light bg-light">
-    <a class="navbar-brand" href="#">Mon Site</a>
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav ml-auto">            
-            <li class="nav-item">
-                <a class="nav-link" href="signup.php">S'inscrire</a>
-            </li>
-        </ul>
+    <!-- Inclure le JS de Bootstrap (qui inclut également Popper.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous" defer></script>
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">Mon Site</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="navbar-brand" href="signup.php">S'inscrire</a>
+                </li>
+            </ul>
+        </div>
     </div>
 </nav>
 
-<div class="container mt-5">
-    <h2>Formulaire de Connexion</h2>
-    <?php
-    // Afficher le message d'erreur s'il existe
-    if (isset($error_message)) {
-        echo "<div class='alert alert-danger mt-2' role='alert'>" . $error_message . "</div>";
-    }
-    ?>
-    <form action="#" method="POST">
-        <div class="form-group">
-            <label for="email">Adresse e-mail</label>
-            <input type="email" class="form-control" id="email" name="email" value="<?php echo isset($email) ? $email : ''; ?>" required>
-        </div>
-        <div class="form-group">
-            <label for="password">Mot de passe</label>
-            <input type="password" class="form-control" id="password" name="password" required>
-        </div>
+    <div class="container mt-5 ">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Formulaire de Connexion</h2>
+                    </div>
+                    <div class="card-body">
+                        <?php
+                        // Afficher le message d'erreur s'il existe
+                        if (isset($error_message)) {
+                            echo "<div class='alert alert-danger mt-2' role='alert'>" . $error_message . "</div>";
+                        }
+                        ?>
+                        <form action="" method="POST">
+                            <div class="form-group mb-3">
+                                <label for="email">Adresse e-mail</label>
+                                <input type="email" class="form-control" id="email" name="email"
+                                    value="<?php echo isset($email) ? $email : ''; ?>" required>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="password">Mot de passe</label>
+                                <input type="password" class="form-control" id="password" name="password" required>
+                            </div>
 
-        <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+                            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
 
-        <div class="form-group form-check">
-            <input type="checkbox" class="form-check-input" id="rememberMe" name="rememberMe">
-            <label class="form-check-label" for="rememberMe">Se souvenir de moi</label>
+                            <div class="form-group form-check mb-3">
+                                <input type="checkbox" class="form-check-input" id="rememberMe" name="rememberMe">
+                                <label class="form-check-label" for="rememberMe">Se souvenir de moi</label>
+                            </div>
+                            <div class="form-group mb-3">
+                                <a href="forgot_password.php">Mot de passe oublié ?</a>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Se connecter</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="form-group">
-            <a href="forgot_password.php">Mot de passe oublié ?</a>
-        </div>
-        <button type="submit" class="btn btn-primary">Se connecter</button>
-    </form>
-</div>
+    </div>
 
 </body>
 </html>

@@ -126,7 +126,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </script>";
     }
     ?>
-    <form action="#" method="POST">
+    <form action="" method="POST">
         <!-- Champ : Prénom -->
         <div class="form-group">
             <label for="prenom">Prénom</label>

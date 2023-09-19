@@ -13,7 +13,7 @@ handleInactivity();
 list($email_error, $success_message, $contacts) = manageContacts();
 
 function setSecurityHeaders($nonce) {
-    header("Content-Security-Policy: default-src 'self'; script-src 'self' https://code.jquery.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com 'nonce-$nonce'; style-src 'self' https://maxcdn.bootstrapcdn.com 'nonce-$nonce'; img-src 'self' data:;");
+    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-$nonce' https://code.jquery.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com; style-src 'self' https://maxcdn.bootstrapcdn.com 'nonce-$nonce'; img-src 'self' data:;");
     header('X-Frame-Options: DENY');
     header('X-Content-Type-Options: nosniff');
 }
@@ -105,7 +105,7 @@ function manageContacts() {
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" defer></script>
 </head>
 <body>
-<script nonce="<?php echo $nonce; ?>" defer>
+<script nonce="<?php echo $nonce; ?>">
     // Durée d'inactivité avant déconnexion (en millisecondes). Ici, 30 minutes.
     let timeoutDuration = 1800000;
     let timeout;
@@ -151,7 +151,7 @@ function manageContacts() {
     <div class="row">
         <div class="col-md-6">
             <!-- Formulaire d'ajout de contact -->
-            <form action="#" method="POST">
+            <form action="" method="POST">
                 <div class="form-group">
                     <label for="nom">Nom</label>
                     <input type="text" class="form-control" id="nom" name="nom" required>
@@ -187,7 +187,8 @@ function manageContacts() {
                     foreach ($contacts as $contact) {
                         echo "<li class='list-group-item'>";
                         echo "{$contact['first_name']} {$contact['last_name']} - {$contact['email']}";
-                        echo "<form method='post' class='d-inline-block ml-3 float-right' onsubmit='return confirmDelete();'>";
+                        // Début du formulaire de suppression
+                        echo "<form method='post' class='d-inline-block ml-3 float-right' onsubmit='return confirmDelete($nonce);'>";
                         echo "<input type='hidden' name='delete_contact_id' value='{$contact['id']}'>";
                         echo "<button type='submit' class='btn btn-link p-0 border-0'>";
                         echo '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-trash" viewBox="0 0 20 20">';
@@ -195,7 +196,7 @@ function manageContacts() {
                         echo '<path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z"/>';
                         echo '</svg>';
                         echo "</button>";
-                        echo "</form>";
+                        echo "</form>";  // Fin du formulaire de suppression
                         echo "</li>";
                     }
                 ?>
@@ -204,4 +205,4 @@ function manageContacts() {
     </div>
 </div>
 </body>
-</html>           
+</html>
