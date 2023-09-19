@@ -1,8 +1,9 @@
 <?php
-// Protége contre les attaques de type cross-site scripting (XSS)
-header('Content-Security-Policy: default-src \'self\'; script-src \'self\' https://code.jquery.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com; style-src \'self\' https://maxcdn.bootstrapcdn.com; img-src \'self\';');
-// Protection contre le clickjacking, empêche les iframes
+// Génération d'un nonce pour la CSP
+$nonce = bin2hex(random_bytes(16));
+header("Content-Security-Policy: default-src 'self'; script-src 'self' https://code.jquery.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com 'nonce-$nonce'; style-src 'self' https://maxcdn.bootstrapcdn.com 'nonce-$nonce';");
 header('X-Frame-Options: DENY');
+header('X-Content-Type-Options: nosniff');
 session_start();
 
 // Génération du jeton CSRF s'il n'existe pas
@@ -23,9 +24,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $password_repeat = htmlspecialchars($_POST["password_repeat"], ENT_QUOTES, 'UTF-8');
     $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
 
-    // Vérification de la longueur minimale du mot de passe
-    if (strlen($password) < 8) {
-        $error_message = "Le mot de passe doit comporter au moins 8 caractères!";
+    // Vérification de la complexité du mot de passe
+    if (!preg_match('/[A-Z]/', $password) || !preg_match('/[a-z]/', $password) || !preg_match('/[0-9]/', $password) || strlen($password) < 8) {
+        $error_message = "Le mot de passe doit comporter au moins 8 caractères, dont une majuscule, une minuscule et un chiffre.";
     }
     // Vérification si les mots de passe correspondent
     elseif ($password !== $password_repeat) {
@@ -40,7 +41,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt = $conn->prepare("SELECT email FROM users WHERE email = ?");
             $stmt->execute([$email]);
             if ($stmt->fetch()) {
-                $error_message = "L'inscription a échoué. Veuillez réessayer.";
+                $error_message = "L'adresse e-mail est déjà utilisée.";
             } else {
                 // Cryptage du mot de passe
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
@@ -51,14 +52,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $success_message = "Inscription réussie! Vous serez redirigé dans <span id='countdown'>3</span> secondes.";
             }
         } catch (PDOException $e) {
-            $error_message = "Erreur : " . $e->getMessage();
+            error_log("Erreur lors de l'inscription : " . $e->getMessage()); // Log de l'erreur
+            $error_message = "Une erreur est survenue. Veuillez réessayer plus tard.";
         }
     }
 }
-
-// En-têtes de sécurité
-header("Content-Security-Policy: default-src 'self'; script-src 'self' code.jquery.com cdnjs.cloudflare.com maxcdn.bootstrapcdn.com; style-src 'self' maxcdn.bootstrapcdn.com;");
-header('X-Frame-Options: DENY');
 ?>
 
 <!DOCTYPE html>
@@ -68,12 +66,13 @@ header('X-Frame-Options: DENY');
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Formulaire d'Inscription</title>
     <!-- Inclure jQuery -->
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js" defer></script>
     <!-- Inclure les styles Bootstrap -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">       
     <!-- Inclure les scripts Bootstrap -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js" defer></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" defer></script>
+    
 </head>
 <body>
 
@@ -86,7 +85,7 @@ header('X-Frame-Options: DENY');
     }
     if (isset($success_message)) {
         echo "<div class='alert alert-success mt-2' role='alert' id='success-message'>" . $success_message . "</div>";
-        echo "<script>
+        echo "<script nonce='$nonce'>
             function startCountdown() {
                 let countdown = 3;
                 const interval = setInterval(() => {
@@ -141,8 +140,13 @@ header('X-Frame-Options: DENY');
 
         <!-- Bouton d'envoi -->
         <button type="submit" class="btn btn-primary">S'inscrire</button>
-        <a href="index.php" class="ml-4" style="text-decoration: underline;">Je me connecte</a>
+        <a href="index.php" class="ml-4">Je me connecte</a>
     </form>
+    <style nonce="<?php echo $nonce; ?>">
+            a.ml-4 {
+                text-decoration: underline;
+            }
+        </style>
 </div>
 </body>
 </html>

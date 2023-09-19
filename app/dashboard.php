@@ -1,5 +1,9 @@
 <?php
-
+// Génération d'un nonce pour la CSP
+$nonce = bin2hex(random_bytes(16));
+header("Content-Security-Policy: default-src 'self'; script-src 'self' https://code.jquery.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com 'nonce-$nonce'; style-src 'self' https://maxcdn.bootstrapcdn.com 'nonce-$nonce'; img-src 'self' data:;");
+header('X-Frame-Options: DENY');
+header('X-Content-Type-Options: nosniff');
 session_start();
 
 // Durée d'inactivité avant déconnexion (en secondes). Ici, 30 minutes.
@@ -62,8 +66,7 @@ try {
 } catch (PDOException $e) {
     echo "Erreur : " . $e->getMessage();
 }
-header('Content-Security-Policy: default-src \'self\'; script-src \'self\' https://code.jquery.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com; style-src \'self\' https://maxcdn.bootstrapcdn.com; img-src \'self\';');
-header('X-Frame-Options: DENY');
+
 ?>
 
 <!DOCTYPE html>
@@ -73,7 +76,7 @@ header('X-Frame-Options: DENY');
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tableau de Bord - Gestion des Contacts</title>
     <!-- Inclure jQuery -->
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js" defer></script>
     <!-- Inclure les styles Bootstrap -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <!-- Inclure les scripts Bootstrap -->
@@ -81,7 +84,27 @@ header('X-Frame-Options: DENY');
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" defer></script>
 </head>
 <body>
+<script nonce="<?php echo $nonce; ?>" defer>
+    // Durée d'inactivité avant déconnexion (en millisecondes). Ici, 30 minutes.
+    var timeoutDuration = 1800000;
+    var timeout;
 
+    // Réinitialisez le délai d'expiration à chaque interaction de l'utilisateur
+    document.onmousemove = resetTimeout;
+    document.onkeypress = resetTimeout;
+
+    function logout() {
+        window.location.href = 'logout.php';
+    }
+
+    function resetTimeout() {
+        clearTimeout(timeout);
+        timeout = setTimeout(logout, timeoutDuration);
+    }
+
+    // Initialisez le délai d'expiration
+    resetTimeout();
+</script>
 <nav class="navbar navbar-expand-lg navbar-light bg-light">
     <a class="navbar-brand" href="#">Mon Tableau de Bord</a>
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -154,28 +177,6 @@ header('X-Frame-Options: DENY');
         </div>
     </div>
 </div>
-
-<script>
-    // Durée d'inactivité avant déconnexion (en millisecondes). Ici, 30 minutes.
-    var timeoutDuration = 1800000;
-    var timeout;
-
-    // Réinitialisez le délai d'expiration à chaque interaction de l'utilisateur
-    document.onmousemove = resetTimeout;
-    document.onkeypress = resetTimeout;
-
-    function logout() {
-        window.location.href = 'logout.php';
-    }
-
-    function resetTimeout() {
-        clearTimeout(timeout);
-        timeout = setTimeout(logout, timeoutDuration);
-    }
-
-    // Initialisez le délai d'expiration
-    resetTimeout();
-</script>
 </body>
 </html>                 
 

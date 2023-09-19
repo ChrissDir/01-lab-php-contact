@@ -4,10 +4,10 @@ services:
     build: 
       dockerfile: Dockerfile
     environment:
-      - MYSQL_ROOT_PASSWORD=1234
+      - MYSQL_ROOT_PASSWORD=135792468
       - MYSQL_DATABASE=pr1
-      - MYSQL_USER=chriss
-      - MYSQL_PASSWORD=chriss1234
+      - MYSQL_USER=theFirstUser
+      - MYSQL_PASSWORD=theFirstUser1234
     ports:
       - 80:80
     volumes:
@@ -28,9 +28,9 @@ services:
         source: ./mysql-init/
         target: /docker-entrypoint-initdb.d/
     environment:
-      - MYSQL_ROOT_PASSWORD=1234
+      - MYSQL_ROOT_PASSWORD=135792468
       - MYSQL_DATABASE=pr1
-      - MYSQL_USER=chriss
-      - MYSQL_PASSWORD=chriss1234
+      - MYSQL_USER=theFirstUser
+      - MYSQL_PASSWORD=theFirstUser1234
 volumes:
   projet1: 

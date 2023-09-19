@@ -3,6 +3,7 @@
 header('Content-Security-Policy: default-src \'self\'; script-src \'self\' https://code.jquery.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com; style-src \'self\' https://maxcdn.bootstrapcdn.com; img-src \'self\';');
 // Protection contre le clickjacking, empêche les iframes
 header('X-Frame-Options: DENY');
+header('X-Content-Type-Options: nosniff');
 session_start();
 
 // Génération du jeton CSRF s'il n'existe pas
@@ -48,7 +49,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Réinitialisation du mot de passe</title>
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js" defer></script>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js" defer></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" defer></script>
