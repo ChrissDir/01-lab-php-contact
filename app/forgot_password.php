@@ -10,7 +10,7 @@ initializeCSRFToken();
 $message = handleForm();
 
 function setSecurityHeaders() {
-    header('Content-Security-Policy: default-src \'self\'; script-src \'self\' https://code.jquery.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com; style-src \'self\' https://maxcdn.bootstrapcdn.com; img-src \'self\';');
+    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL' cdn.jsdelivr.net code.jquery.com cdnjs.cloudflare.com maxcdn.bootstrapcdn.com; style-src 'self' 'sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN' cdn.jsdelivr.net maxcdn.bootstrapcdn.com; img-src 'self' data:;");
     header('X-Frame-Options: DENY');
     header('X-Content-Type-Options: nosniff');
 }
@@ -61,31 +61,34 @@ function resetPassword($email) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Réinitialisation du mot de passe</title>
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js" defer></script>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js" defer></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" defer></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous" defer></script>
 </head>
-<body>
-<div class="container mt-5">
-    <div class="d-flex justify-content-between">
-        <h2>Réinitialiser votre mot de passe</h2>
-        <a href="index.php" class="btn btn-secondary">Retour</a>
-    </div>
-    <form action="forgot_password.php" method="POST">
-        <!-- Champ caché pour le jeton CSRF -->
-        <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-        
-        <div class="form-group">
-            <label for="email">Entrez votre adresse e-mail</label>
-            <input type="email" class="form-control" id="email" name="email" required>
+<body class="bg-light">
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card p-4">
+                <div class="d-flex justify-content-between mb-4">
+                    <h2>Réinitialiser votre mot de passe</h2>
+                    <a href="index.php" class="btn btn-secondary align-self-start">Retour</a>
+                </div>
+                <form action="forgot_password.php" method="POST">
+                    <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Entrez votre adresse e-mail</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <?php
+                    if (!empty($message)) {
+                        echo "<div class='alert-info'>$message</div>";
+                    } ?>
+                    <button type="submit" class="btn btn-primary">Réinitialiser le mot de passe</button>
+                </form>
+            </div>
         </div>
-        <?php
-        if (!empty($message)) {
-            echo $message;
-        } ?>
-        <button type="submit" class="btn btn-primary">Réinitialiser le mot de passe</button>
-    </form>
+    </div>
 </div>
 </body>
 </html>
+

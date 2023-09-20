@@ -70,7 +70,7 @@ function handleRegistrationForm() {
 
 // Génération d'un nonce pour la CSP
 $nonce = generateNonce();
-header("Content-Security-Policy: default-src 'self'; script-src 'self' https://code.jquery.com https://cdnjs.cloudflare.com https://maxcdn.bootstrapcdn.com 'nonce-$nonce'; style-src 'self' https://maxcdn.bootstrapcdn.com 'nonce-$nonce';");
+header("Content-Security-Policy: default-src 'self'; script-src 'self' https://code.jquery.com 'nonce-$nonce' https://cdn.jsdelivr.net; style-src 'self' 'nonce-$nonce' https://cdn.jsdelivr.net;");
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
 
@@ -89,85 +89,105 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Formulaire d'Inscription</title>
-    <!-- Inclure jQuery -->
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js" defer></script>
-    <!-- Inclure les styles Bootstrap -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">       
-    <!-- Inclure les scripts Bootstrap -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js" defer></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" defer></script>
+    <!-- Inclure le CSS de Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <!-- Inclure le JS de Bootstrap (qui inclut également Popper.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous" defer></script>
 </head>
-<body>
-<div class="container mt-5">
-    <h2>Formulaire d'Inscription</h2>
-    <?php
-    if (isset($error_message)) {
-        echo "<div class='alert alert-danger mt-2' role='alert'>" . $error_message . "</div>";
-    }
-    if (isset($success_message)) {
-        echo "<div class='alert alert-success mt-2' role='alert' id='success-message'>" . $success_message . "</div>";
-        echo "<script nonce='$nonce'>
-            function startCountdown() {
-                let countdown = 3;
-                const interval = setInterval(() => {
-                    if (countdown === 0) {
-                        document.getElementById('success-message').innerText = \"C'est parti!\";
-                        clearInterval(interval);
-                        setTimeout(() => {
-                            window.location.href = 'index.php';
-                        }, 1000);
-                    } else {
-                        document.getElementById('countdown').innerText = countdown;
-                        countdown--;
-                    }
-                }, 1000);
-            }
-            startCountdown();
-        </script>";
-    }
-    ?>
-    <form action="" method="POST">
-        <!-- Champ : Prénom -->
-        <div class="form-group">
-            <label for="prenom">Prénom</label>
-            <input type="text" class="form-control" id="prenom" name="prenom" value="<?php echo isset($prenom) ? $prenom : ''; ?>" required>
+<body class="bg-light d-flex justify-content-center align-items-center vh-100">
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card p-4 shadow-sm">
+                <h2 class="mb-4">Formulaire d'Inscription</h2>
+                <?php
+                if (isset($error_message)) {
+                    echo "<div class='alert alert-danger mt-2 mb-4' role='alert'>" . $error_message . "</div>";
+                }
+                if (isset($success_message)) {
+                    echo "<div class='alert alert-success mt-2 mb-4' role='alert' id='success-message'>" . $success_message . "</div>";
+                    echo "<script nonce='$nonce'>
+                        function startCountdown() {
+                            let countdown = 3;
+                            const interval = setInterval(() => {
+                                if (countdown === 0) {
+                                    document.getElementById('success-message').innerText = \"C'est parti!\";
+                                    clearInterval(interval);
+                                    setTimeout(() => {
+                                        window.location.href = 'index.php';
+                                    }, 1000);
+                                } else {
+                                    document.getElementById('countdown').innerText = countdown;
+                                    countdown--;
+                                }
+                            }, 1000);
+                        }
+                        startCountdown();
+                    </script>";
+                }
+                ?>
+                <form action="" method="POST" id="registrationForm" novalidate>
+                <div class="form-group mb-3">
+                        <label for="prenom">Prénom</label>
+                        <input type="text" class="form-control" id="prenom" name="prenom" value="<?php echo isset($prenom) ? $prenom : ''; ?>" required>
+                        <div class="invalid-feedback">
+                            Veuillez entrer votre prénom.
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="nom">Nom</label>
+                        <input type="text" class="form-control" id="nom" name="nom" value="<?php echo isset($nom) ? $nom : ''; ?>" required>
+                        <div class="invalid-feedback">
+                            Veuillez entrer votre nom.
+                        </div>
+                    </div>
+
+                    <!-- Champ : Adresse e-mail -->
+                    <div class="form-group mb-3">
+                        <label for="email">Adresse e-mail</label>
+                        <input type="email" class="form-control" id="email" name="email" value="<?php echo isset($email) ? $email : ''; ?>" required>
+                        <div class="invalid-feedback">
+                            Veuillez entrer votre adresse mail.
+                        </div>
+                    </div>
+
+                    <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+
+                    <!-- Champ : Mot de passe -->
+                    <div class="form-group mb-3">
+                        <label for="password">Mot de passe</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                        <div class="invalid-feedback">
+                            Mot de passe invalide.
+                        </div>
+                    </div>
+
+                    <!-- Champ : Répéter le mot de passe -->
+                    <div class="form-group mb-4">
+                        <label for="password_repeat">Répéter le mot de passe</label>
+                        <input type="password" class="form-control" id="password_repeat" name="password_repeat" required>
+                        <div class="invalid-feedback">
+                            Veuillez répéter votre mot de passe.
+                        </div>
+                    </div>
+
+                    <!-- Bouton d'envoi -->
+                    <button type="submit" class="btn btn-primary me-3">S'inscrire</button>
+                    <a href="index.php" class="text-decoration-underline">Je me connecte</a>
+                </form>
+                <script nonce='<?php echo $nonce; ?>'>
+                    document.getElementById('registrationForm').addEventListener('submit', function(event) {
+                        if (!event.target.checkValidity()) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            event.target.classList.add('was-validated');
+                        }
+                    });
+                </script>
+            </div>
         </div>
-
-        <!-- Champ : Nom -->
-        <div class="form-group">
-            <label for="nom">Nom</label>
-            <input type="text" class="form-control" id="nom" name="nom" value="<?php echo isset($nom) ? $nom : ''; ?>" required>
-        </div>
-
-        <!-- Champ : Adresse e-mail -->
-        <div class="form-group">
-            <label for="email">Adresse e-mail</label>
-            <input type="email" class="form-control" id="email" name="email" value="<?php echo isset($email) ? $email : ''; ?>" required>
-        </div>
-
-        <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-
-        <!-- Champ : Mot de passe -->
-        <div class="form-group">
-            <label for="password">Mot de passe</label>
-            <input type="password" class="form-control" id="password" name="password" required>
-        </div>
-
-        <!-- Champ : Répéter le mot de passe -->
-        <div class="form-group">
-            <label for="password_repeat">Répéter le mot de passe</label>
-            <input type="password" class="form-control" id="password_repeat" name="password_repeat" required>
-        </div>
-
-        <!-- Bouton d'envoi -->
-        <button type="submit" class="btn btn-primary">S'inscrire</button>
-        <a href="index.php" class="ml-4">Je me connecte</a>
-    </form>
-    <style nonce="<?php echo $nonce; ?>">
-            a.ml-4 {
-                text-decoration: underline;
-            }
-    </style>
+    </div>
 </div>
 </body>
 </html>

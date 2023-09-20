@@ -1,7 +1,6 @@
 <?php
 // En-têtes de sécurité
 header("Content-Security-Policy: default-src 'self'; script-src 'self' 'sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL' cdn.jsdelivr.net code.jquery.com cdnjs.cloudflare.com maxcdn.bootstrapcdn.com; style-src 'self' 'sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN' cdn.jsdelivr.net maxcdn.bootstrapcdn.com; img-src 'self' data:;");
-
 header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
 session_start();
@@ -40,7 +39,7 @@ function initializeLoginAttempts() {
         $_SESSION['last_attempt_time'] = null;
     }
 
-    $lockout_time = 600; // 10 minutes
+    $lockout_time = 0; // 10 minutes
     if ($_SESSION['login_attempts'] >= 5 && (time() - $_SESSION['last_attempt_time']) < $lockout_time) {
         die('Trop de tentatives de connexion. Veuillez réessayer dans quelques minutes.');
     }
@@ -105,19 +104,16 @@ function handleLoginForm($conn) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Formulaire de Connexion</title>
-    <!-- Inclure jQuery -->
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js" defer></script>
     <!-- Inclure le CSS de Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
-
     <!-- Inclure le JS de Bootstrap (qui inclut également Popper.js) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous" defer></script>
 </head>
-<body class="bg-light">
+<body class="bg-light d-flex flex-column vh-100">
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="#">Mon Site</a>
+    <div class="container-fluid d-flex justify-content-between">
+        <a class="navbar-brand m-0 ml-3" href="#">Mon Site</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
             aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
@@ -125,14 +121,15 @@ function handleLoginForm($conn) {
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item">
-                    <a class="navbar-brand" href="signup.php">S'inscrire</a>
+                    <a class="navbar-brand m-0 mr-3" href="signup.php">S'inscrire</a>
                 </li>
             </ul>
         </div>
     </div>
 </nav>
 
-    <div class="container mt-5 ">
+<div class="d-flex flex-column vh-100 justify-content-center mt-n5 pb-5 mb-5">
+    <div class="container">
         <div class="row justify-content-center">
             <div class="col-md-6">
                 <div class="card">
@@ -173,6 +170,7 @@ function handleLoginForm($conn) {
             </div>
         </div>
     </div>
+</div>
 
 </body>
 </html>
