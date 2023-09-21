@@ -1,25 +1,23 @@
 <?php
-// Génération d'un nonce pour la CSP
+// Configuration initiale
 $nonce = bin2hex(random_bytes(16));
-
-// En-têtes de sécurité
 setSecurityHeaders($nonce);
 session_start();
-
-// Gestion de l'inactivité
 handleInactivity();
-
-// Gestion des contacts
 list($email_error, $success_message, $contacts) = manageContacts();
 
+// Fonctions
+
+// Configuration des en-têtes de sécurité
 function setSecurityHeaders($nonce) {
     header("Content-Security-Policy: default-src 'self'; script-src 'self' https://code.jquery.com 'nonce-$nonce' https://cdn.jsdelivr.net; style-src 'self' 'nonce-$nonce' https://cdn.jsdelivr.net;");
     header('X-Frame-Options: DENY');
     header('X-Content-Type-Options: nosniff');
 }
 
+// Gestion de l'inactivité de l'utilisateur
 function handleInactivity() {
-    $timeout_duration = 1800;
+    $timeout_duration = 1800; // 30 minutes
     if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY'] > $timeout_duration)) {
         header("Location: logout.php");
         exit;
@@ -31,11 +29,13 @@ function handleInactivity() {
     }
 }
 
+// Gestion des contacts
 function manageContacts() {
+    
+    // Initialisation des variables
     $email_error = "";
     $success_message = "";
     $contacts = [];
-    
     $connected_user_id = $_SESSION["user_id"];
 
     // Connexion à la base de données
@@ -43,7 +43,7 @@ function manageContacts() {
         $conn = new PDO('mysql:host=mysql;dbname='. getenv('MYSQL_DATABASE'), getenv('MYSQL_USER'), getenv('MYSQL_PASSWORD'));
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-        // Si une demande de suppression de contact est soumise
+        // Gestion de la suppression de contacts
         if (isset($_POST["delete_contact_id"])) {
             $contact_id_to_delete = intval($_POST["delete_contact_id"]);
             $stmt = $conn->prepare("DELETE FROM contacts WHERE id = ? AND user_id = ?");
@@ -55,18 +55,19 @@ function manageContacts() {
             }
         }
 
-        // Si le formulaire d'ajout de contact est soumis
+        // Gestion de l'ajout de contacts
         if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["nom"])) {
             $nom = htmlspecialchars($_POST["nom"], ENT_QUOTES, 'UTF-8');
             $prenom = htmlspecialchars($_POST["prenom"], ENT_QUOTES, 'UTF-8');
             $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
-            // Vérification si l'email du contact existe déjà
+            
+            // Vérification de l'existence de l'email
             $stmt = $conn->prepare("SELECT email FROM contacts WHERE email = ?");
             $stmt->execute([$email]);
             if ($stmt->fetch()) {
                 $email_error = "Cette adresse email existe déjà!";
             } else {
-                // Insertion du contact dans la base de données
+                // Insertion du contact
                 $stmt = $conn->prepare("INSERT INTO contacts (first_name, last_name, email, user_id) VALUES (?, ?, ?, ?)");
                 $stmt->execute([$prenom, $nom, $email, $connected_user_id]);
                 if ($stmt->rowCount() > 0) {
@@ -77,7 +78,7 @@ function manageContacts() {
             }
         }
 
-        // Récupération des contacts de l'utilisateur connecté
+        // Récupération des contacts
         $stmt = $conn->prepare("SELECT id, first_name, last_name, email FROM contacts WHERE user_id = ?");
         $stmt->execute([$connected_user_id]);
         $contacts = $stmt->fetchAll();
@@ -103,34 +104,39 @@ function manageContacts() {
 </head>
 <body>
 <script nonce="<?php echo $nonce; ?>">
-    // Durée d'inactivité avant déconnexion (en millisecondes). Ici, 30 minutes.
-    let timeoutDuration = 1800000;
-    let timeout;
+    document.addEventListener('DOMContentLoaded', function() {
+        let timeoutDuration = 1800000;
+        let timeout;
 
-    // Réinitialisez le délai d'expiration à chaque interaction de l'utilisateur
-    document.onmousemove = resetTimeout;
-    document.onkeypress = resetTimeout;
+        function logout() {
+            window.location.href = 'logout.php';
+        }
 
-    function logout() {
-        window.location.href = 'logout.php';
-    }
+        function resetTimeout() {
+            clearTimeout(timeout);
+            timeout = setTimeout(logout, timeoutDuration);
+        }
 
-    function resetTimeout() {
-        clearTimeout(timeout);
-        timeout = setTimeout(logout, timeoutDuration);
-    }
+        document.addEventListener('mousemove', resetTimeout);
+        document.addEventListener('keypress', resetTimeout);
 
-    // Initialisez le délai d'expiration
-    resetTimeout();
+        resetTimeout();
 
-    // Fonction pour confirmer la suppression d'un contact
-    function confirmDelete() {
-        return confirm("Êtes-vous sûr de vouloir supprimer ce contact?");
-    }
+        document.querySelectorAll('.delete-contact-form').forEach(form => {
+            form.addEventListener('submit', function() {
+                return confirm("Êtes-vous sûr de vouloir supprimer ce contact?");
+            });
+        });
+    });
 </script>
+
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container-fluid d-flex justify-content-between">
-        <a class="navbar-brand m-0 ml-3" href="#">Mon Tableau de Bord</a>
+    <p class="navbar-brand m-0 ml-3">
+    <?php 
+    echo isset($_SESSION["first_name"]) ? "Tableau de bord de " . ucfirst($_SESSION["first_name"]) . " " . ucfirst($_SESSION["last_name"]) : "Mon Tableau de Bord"; 
+    ?>
+</p>
         <a class="navbar-brand m-0 mr-3" href="logout.php">Se déconnecter</a>
     </div>
 </nav>
@@ -179,7 +185,7 @@ function manageContacts() {
                         echo "<li class='list-group-item d-flex justify-content-between align-items-center'>";
                         echo "{$contact['first_name']} {$contact['last_name']} - {$contact['email']}";
                         // Début du formulaire de suppression
-                        echo "<form method='post' class='d-inline-block' onsubmit='return confirmDelete($nonce);'>";
+                        echo "<form method='post' class='d-inline-block delete-contact-form'>";
                         echo "<input type='hidden' name='delete_contact_id' value='{$contact['id']}'>";
                         echo "<button type='submit' class='btn btn-link p-0 border-0 text-danger'>";
                         echo '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-trash" viewBox="0 0 20 20">';

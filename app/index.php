@@ -1,36 +1,7 @@
 <?php
-// En-têtes de sécurité
-header("Content-Security-Policy: default-src 'self'; script-src 'self' 'sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL' cdn.jsdelivr.net code.jquery.com cdnjs.cloudflare.com maxcdn.bootstrapcdn.com; style-src 'self' 'sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN' cdn.jsdelivr.net maxcdn.bootstrapcdn.com; img-src 'self' data:;");
-header('X-Frame-Options: DENY');
-header('X-Content-Type-Options: nosniff');
-session_start();
-
-// Génération du jeton CSRF s'il n'existe pas
-if (!isset($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
-
-// Si l'utilisateur est déjà connecté, redirigez-le vers le tableau de bord
-if (isset($_SESSION["user_id"])) {
-    header("Location: dashboard.php");
-    exit;
-}
-
-// Vérification des tentatives de connexion
-initializeLoginAttempts();
-
-// Connexion à la base de données
-$conn = connectToDatabase();
-
-// Vérification si le formulaire a été soumis
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    handleLoginForm($conn);
-} elseif (isset($_COOKIE["user_id"])) {
-    $_SESSION["user_id"] = $_COOKIE["user_id"];
-    header("Location: dashboard.php");
-    exit;
-}
-
+// ------------------------------
+// Fonctions
+// ------------------------------
 function initializeLoginAttempts() {
     if (!isset($_SESSION['login_attempts'])) {
         $_SESSION['login_attempts'] = 0;
@@ -39,7 +10,7 @@ function initializeLoginAttempts() {
         $_SESSION['last_attempt_time'] = null;
     }
 
-    $lockout_time = 0; // 10 minutes
+    $lockout_time = 600;
     if ($_SESSION['login_attempts'] >= 5 && (time() - $_SESSION['last_attempt_time']) < $lockout_time) {
         die('Trop de tentatives de connexion. Veuillez réessayer dans quelques minutes.');
     }
@@ -59,7 +30,6 @@ function connectToDatabase() {
 function handleLoginForm($conn) {
     global $error_message;
 
-    // Vérification du jeton CSRF
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
         session_destroy();
         die('Invalid CSRF token');
@@ -68,17 +38,16 @@ function handleLoginForm($conn) {
     $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
     $password = htmlspecialchars($_POST["password"], ENT_QUOTES, 'UTF-8');
 
-    // Vérification de l'utilisateur dans la base de données
     try {
-        $stmt = $conn->prepare("SELECT id, password FROM users WHERE email = ?");
+        $stmt = $conn->prepare("SELECT id, first_name, last_name, password FROM users WHERE email = ?");
         $stmt->execute([$email]);
         $user = $stmt->fetch();
 
         if ($user && password_verify($password, $user["password"])) {
-            // L'utilisateur est authentifié
             $_SESSION["user_id"] = $user["id"];
+            $_SESSION["first_name"] = $user["first_name"];
+            $_SESSION["last_name"] = $user["last_name"];
             
-            // Si "Se souvenir de moi" est coché
             if (isset($_POST["rememberMe"])) {
                 setcookie("user_id", $user["id"], time() + (86400 * 30), "/", "", true, true);
             }
@@ -95,6 +64,51 @@ function handleLoginForm($conn) {
         error_log('Error while checking user: ' . $e->getMessage());
         $error_message = "Une erreur est survenue. Veuillez réessayer plus tard.";
     }
+}
+
+// ------------------------------
+// En-têtes de sécurité
+// ------------------------------
+header("Content-Security-Policy: default-src 'self'; script-src 'self' 'sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL' cdn.jsdelivr.net code.jquery.com cdnjs.cloudflare.com maxcdn.bootstrapcdn.com; style-src 'self' 'sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN' cdn.jsdelivr.net maxcdn.bootstrapcdn.com; img-src 'self' data:;");
+header('X-Frame-Options: DENY');
+header('X-Content-Type-Options: nosniff');
+
+// ------------------------------
+// Initialisation de la session
+// ------------------------------
+session_start();
+
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+// ------------------------------
+// Redirection si déjà connecté
+// ------------------------------
+if (isset($_SESSION["user_id"])) {
+    header("Location: dashboard.php");
+    exit;
+}
+
+// ------------------------------
+// Gestion des tentatives de connexion
+// ------------------------------
+initializeLoginAttempts();
+
+// ------------------------------
+// Connexion à la base de données
+// ------------------------------
+$conn = connectToDatabase();
+
+// ------------------------------
+// Gestion du formulaire de connexion
+// ------------------------------
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    handleLoginForm($conn);
+} elseif (isset($_COOKIE["user_id"])) {
+    $_SESSION["user_id"] = $_COOKIE["user_id"];
+    header("Location: dashboard.php");
+    exit;
 }
 ?>
 

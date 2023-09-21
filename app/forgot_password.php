@@ -1,26 +1,29 @@
 <?php
-// En-têtes de sécurité
+// Configuration initiale
 setSecurityHeaders();
 session_start();
-
-// Génération du jeton CSRF s'il n'existe pas
 initializeCSRFToken();
 
 // Traitement du formulaire
 $message = handleForm();
 
+// Fonctions
+
+// Configuration des en-têtes de sécurité
 function setSecurityHeaders() {
     header("Content-Security-Policy: default-src 'self'; script-src 'self' 'sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL' cdn.jsdelivr.net code.jquery.com cdnjs.cloudflare.com maxcdn.bootstrapcdn.com; style-src 'self' 'sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN' cdn.jsdelivr.net maxcdn.bootstrapcdn.com; img-src 'self' data:;");
     header('X-Frame-Options: DENY');
     header('X-Content-Type-Options: nosniff');
 }
 
+// Initialisation du jeton CSRF
 function initializeCSRFToken() {
     if (!isset($_SESSION['csrf_token'])) {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     }
 }
 
+// Traitement du formulaire de réinitialisation du mot de passe
 function handleForm() {
     if ($_SERVER["REQUEST_METHOD"] !== "POST") {
         return;
@@ -35,12 +38,12 @@ function handleForm() {
     return resetPassword($email);
 }
 
+// Réinitialisation du mot de passe
 function resetPassword($email) {
     try {
         $conn = new PDO('mysql:host=mysql;dbname='. getenv('MYSQL_DATABASE'), getenv('MYSQL_USER'), getenv('MYSQL_PASSWORD'));
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-        // Vérification si l'email existe dans la base de données
         $stmt = $conn->prepare("SELECT email FROM users WHERE email = ?");
         $stmt->execute([$email]);
         if ($stmt->fetch()) {
