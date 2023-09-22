@@ -4,7 +4,6 @@ services:
     build: 
       dockerfile: Dockerfile
     environment:
-      - MYSQL_ROOT_PASSWORD=135792468
       - MYSQL_DATABASE=pr1
       - MYSQL_USER=theFirstUser
       - MYSQL_PASSWORD=theFirstUser1234
@@ -32,5 +31,10 @@ services:
       - MYSQL_DATABASE=pr1
       - MYSQL_USER=theFirstUser
       - MYSQL_PASSWORD=theFirstUser1234
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
 volumes:
   projet1: 

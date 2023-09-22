@@ -1,29 +1,24 @@
 <?php
+require_once 'database.php';  // Inclure le fichier database.php
 // ------------------------------
 // Fonctions
 // ------------------------------
+
 function initializeLoginAttempts() {
     if (!isset($_SESSION['login_attempts'])) {
         $_SESSION['login_attempts'] = 0;
     }
+    
     if (!isset($_SESSION['last_attempt_time'])) {
         $_SESSION['last_attempt_time'] = null;
     }
 
     $lockout_time = 600;
     if ($_SESSION['login_attempts'] >= 5 && (time() - $_SESSION['last_attempt_time']) < $lockout_time) {
-        die('Trop de tentatives de connexion. Veuillez réessayer dans quelques minutes.');
-    }
-}
-
-function connectToDatabase() {
-    try {
-        $conn = new PDO('mysql:host=mysql;dbname='. getenv('MYSQL_DATABASE'), getenv('MYSQL_USER'), getenv('MYSQL_PASSWORD'));
-        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        return $conn;
-    } catch (PDOException $e) {
-        error_log('Database connection failed: ' . $e->getMessage());
-        die('Une erreur est survenue. Veuillez réessayer plus tard.');
+        $_SESSION['lockout'] = true;
+        $_SESSION['remaining_lockout_time'] = $lockout_time - (time() - $_SESSION['last_attempt_time']);
+    } else {
+        $_SESSION['lockout'] = false;
     }
 }
 
@@ -93,16 +88,19 @@ if (isset($_SESSION["user_id"])) {
 // ------------------------------
 // Gestion des tentatives de connexion
 // ------------------------------
+
 initializeLoginAttempts();
 
 // ------------------------------
 // Connexion à la base de données
 // ------------------------------
-$conn = connectToDatabase();
+
+$conn = connectToDatabase();  // Utilisation de la fonction depuis database.php
 
 // ------------------------------
 // Gestion du formulaire de connexion
 // ------------------------------
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     handleLoginForm($conn);
 } elseif (isset($_COOKIE["user_id"])) {
@@ -122,8 +120,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
     <!-- Inclure le JS de Bootstrap (qui inclut également Popper.js) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous" defer></script>
+    <script src="./login.js" defer></script>
 </head>
 <body class="bg-light d-flex flex-column vh-100">
+<div id="lockout-data" data-lockout="<?php echo isset($_SESSION['lockout']) ? $_SESSION['lockout'] : false; ?>" data-remaining-time="<?php echo isset($_SESSION['remaining_lockout_time']) ? $_SESSION['remaining_lockout_time'] : 0; ?>"></div>
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container-fluid d-flex justify-content-between">
@@ -152,7 +152,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </div>
                     <div class="card-body">
                         <?php
+                        // ------------------------------
                         // Afficher le message d'erreur s'il existe
+                        // ------------------------------
                         if (isset($error_message)) {
                             echo "<div class='alert alert-danger mt-2' role='alert'>" . $error_message . "</div>";
                         }

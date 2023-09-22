@@ -1,21 +1,30 @@
 <?php
+require_once 'database.php';  // Inclure le fichier database.php
+// ------------------------------
 // Configuration initiale
+// ------------------------------
 $nonce = bin2hex(random_bytes(16));
 setSecurityHeaders($nonce);
 session_start();
 handleInactivity();
 list($email_error, $success_message, $contacts) = manageContacts();
 
+// ------------------------------
 // Fonctions
+// ------------------------------
 
+// ------------------------------
 // Configuration des en-têtes de sécurité
+// ------------------------------
 function setSecurityHeaders($nonce) {
     header("Content-Security-Policy: default-src 'self'; script-src 'self' https://code.jquery.com 'nonce-$nonce' https://cdn.jsdelivr.net; style-src 'self' 'nonce-$nonce' https://cdn.jsdelivr.net;");
     header('X-Frame-Options: DENY');
     header('X-Content-Type-Options: nosniff');
 }
 
+// ------------------------------
 // Gestion de l'inactivité de l'utilisateur
+// ------------------------------
 function handleInactivity() {
     $timeout_duration = 1800; // 30 minutes
     if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY'] > $timeout_duration)) {
@@ -29,9 +38,10 @@ function handleInactivity() {
     }
 }
 
+// ------------------------------
 // Gestion des contacts
+// ------------------------------
 function manageContacts() {
-    
     // Initialisation des variables
     $email_error = "";
     $success_message = "";
@@ -39,10 +49,9 @@ function manageContacts() {
     $connected_user_id = $_SESSION["user_id"];
 
     // Connexion à la base de données
-    try {
-        $conn = new PDO('mysql:host=mysql;dbname='. getenv('MYSQL_DATABASE'), getenv('MYSQL_USER'), getenv('MYSQL_PASSWORD'));
-        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $conn = connectToDatabase();  // Utilisation de la fonction depuis database.php
 
+    try {
         // Gestion de la suppression de contacts
         if (isset($_POST["delete_contact_id"])) {
             $contact_id_to_delete = intval($_POST["delete_contact_id"]);
@@ -86,9 +95,9 @@ function manageContacts() {
     } catch (PDOException $e) {
         $email_error = "Erreur : " . $e->getMessage();
     }
-    
     return [$email_error, $success_message, $contacts];
 }
+
 ?>
 
 <!DOCTYPE html>
@@ -101,42 +110,17 @@ function manageContacts() {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
     <!-- Inclure le JS de Bootstrap (qui inclut également Popper.js) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous" defer></script>
+    <script src="./dashboard.js" defer></script>
 </head>
 <body>
-<script nonce="<?php echo $nonce; ?>">
-    document.addEventListener('DOMContentLoaded', function() {
-        let timeoutDuration = 1800000;
-        let timeout;
-
-        function logout() {
-            window.location.href = 'logout.php';
-        }
-
-        function resetTimeout() {
-            clearTimeout(timeout);
-            timeout = setTimeout(logout, timeoutDuration);
-        }
-
-        document.addEventListener('mousemove', resetTimeout);
-        document.addEventListener('keypress', resetTimeout);
-
-        resetTimeout();
-
-        document.querySelectorAll('.delete-contact-form').forEach(form => {
-            form.addEventListener('submit', function() {
-                return confirm("Êtes-vous sûr de vouloir supprimer ce contact?");
-            });
-        });
-    });
-</script>
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container-fluid d-flex justify-content-between">
-    <p class="navbar-brand m-0 ml-3">
-    <?php 
-    echo isset($_SESSION["first_name"]) ? "Tableau de bord de " . ucfirst($_SESSION["first_name"]) . " " . ucfirst($_SESSION["last_name"]) : "Mon Tableau de Bord"; 
-    ?>
-</p>
+        <p class="navbar-brand m-0 ml-3">
+        <?php 
+        echo isset($_SESSION["first_name"]) ? "Tableau de bord de " . ucfirst($_SESSION["first_name"]) . " " . ucfirst($_SESSION["last_name"]) : "Mon Tableau de Bord"; 
+        ?>
+        </p>
         <a class="navbar-brand m-0 mr-3" href="logout.php">Se déconnecter</a>
     </div>
 </nav>

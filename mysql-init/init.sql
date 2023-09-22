@@ -10,7 +10,9 @@ CREATE TABLE IF NOT EXISTS users (
     first_name VARCHAR(255) NOT NULL,
     last_name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL
+    password VARCHAR(255) NOT NULL,
+    resetToken VARCHAR(64) DEFAULT NULL, -- Ajout de la colonne resetToken
+    resetTokenExpiration DATETIME DEFAULT NULL -- Ajout de la colonne resetTokenExpiration
 );
 
 -- Vérification de l'existence de la table contacts et création si elle n'existe pas

@@ -1,29 +1,42 @@
 <?php
+require_once 'database.php';  // Inclure le fichier database.php
+// ------------------------------
 // Configuration initiale
+// ------------------------------
 setSecurityHeaders();
 session_start();
 initializeCSRFToken();
 
+// ------------------------------
 // Traitement du formulaire
+// ------------------------------
 $message = handleForm();
 
+// ------------------------------
 // Fonctions
+// ------------------------------
 
+// ------------------------------
 // Configuration des en-têtes de sécurité
+// ------------------------------
 function setSecurityHeaders() {
     header("Content-Security-Policy: default-src 'self'; script-src 'self' 'sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL' cdn.jsdelivr.net code.jquery.com cdnjs.cloudflare.com maxcdn.bootstrapcdn.com; style-src 'self' 'sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN' cdn.jsdelivr.net maxcdn.bootstrapcdn.com; img-src 'self' data:;");
     header('X-Frame-Options: DENY');
     header('X-Content-Type-Options: nosniff');
 }
 
+// ------------------------------
 // Initialisation du jeton CSRF
+// ------------------------------
 function initializeCSRFToken() {
     if (!isset($_SESSION['csrf_token'])) {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     }
 }
 
+// ------------------------------
 // Traitement du formulaire de réinitialisation du mot de passe
+// ------------------------------
 function handleForm() {
     if ($_SERVER["REQUEST_METHOD"] !== "POST") {
         return;
@@ -38,16 +51,47 @@ function handleForm() {
     return resetPassword($email);
 }
 
+// ------------------------------
 // Réinitialisation du mot de passe
+// ------------------------------
 function resetPassword($email) {
-    try {
-        $conn = new PDO('mysql:host=mysql;dbname='. getenv('MYSQL_DATABASE'), getenv('MYSQL_USER'), getenv('MYSQL_PASSWORD'));
-        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $conn = connectToDatabase();  // Utilisation de la fonction depuis database.php
 
+    try {
         $stmt = $conn->prepare("SELECT email FROM users WHERE email = ?");
         $stmt->execute([$email]);
         if ($stmt->fetch()) {
-            // TODO: Ajoutez la logique de réinitialisation du mot de passe ici
+
+            // Générer un token de réinitialisation de mot de passe
+            $resetToken = bin2hex(random_bytes(32));
+
+            // Stocker le resetToken dans la base de données avec une date d'expiration de 1 heure
+            $expiration = new DateTime();
+            $expiration->modify('+1 hour');
+            $stmt = $conn->prepare("UPDATE users SET resetToken = ?, resetTokenExpiration = ? WHERE email = ?");
+            $stmt->execute([$resetToken, $expiration->format('Y-m-d H:i:s'), $email]);
+
+            // Créer le lien de réinitialisation
+            $resetLink = "http://php-dev-1.online/reset_password.php?token=$resetToken";
+
+            // Définir les en-têtes
+            $headers = "From: <no-reply@php-dev-1.online.com>\r\n";
+            $headers .= "MIME-Version: 1.0\r\n";
+            $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+
+            // Contenu HTML de l'e-mail
+            $message = "<html><body>";
+            $message .= "<h1>Réinitialisation du mot de passe</h1>";
+            $message .= "<p>Bonjour,</p>";
+            $message .= "<p>Vous avez demandé à réinitialiser votre mot de passe. Cliquez sur le lien ci-dessous pour procéder :</p>";
+            $message .= "<a href='$resetLink'>Réinitialiser mon mot de passe</a>";
+            $message .= "<p>Si vous n'avez pas demandé cette réinitialisation, veuillez ignorer cet e-mail.</p>";
+            $message .= "<p>Cordialement,<br><br>Équipe Dashboard-industry</p>";
+            $message .= "</body></html>";
+
+            // Envoyer l'e-mail
+            mail($email, "Réinitialisation du mot de passe", $message, $headers);
+            
             return "<div class='alert alert-success' role='alert'>Si cet e-mail est associé à un compte, un lien pour réinitialiser votre mot de passe vous a été envoyé !</div>";
         } else {
             return "<div class='alert alert-info' role='alert'>Si cet e-mail est associé à un compte, un lien pour réinitialiser votre mot de passe vous a été envoyé !</div>";
@@ -57,6 +101,7 @@ function resetPassword($email) {
     }
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="fr">
