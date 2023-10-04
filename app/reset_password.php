@@ -110,7 +110,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <div class="row justify-content-center">
             <div class="col-md-6">
                 <div class="card p-4 shadow-sm">
-                    <h2 class="mb-4">Réinitialiser votre mot de passe</h2>
+                    <h2 class="mb-4">Réinitialisez votre mot de passe</h2>
                     <?php
                     if (isset($error_message)) {
                         echo "<div class='alert alert-danger alert-dismissible fade show mt-2 mb-4' role='alert'>

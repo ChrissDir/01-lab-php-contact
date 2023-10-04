@@ -86,7 +86,7 @@ function resetPassword($email) {
             $message .= "<p>Vous avez demandé à réinitialiser votre mot de passe. Cliquez sur le lien ci-dessous pour procéder :</p>";
             $message .= "<a href='$resetLink'>Réinitialiser mon mot de passe</a>";
             $message .= "<p>Si vous n'avez pas demandé cette réinitialisation, veuillez ignorer cet e-mail.</p>";
-            $message .= "<p>Cordialement,<br><br>Équipe Dashboard-industry</p>";
+            $message .= "<p>Cordialement,<br><br>Équipe Dashboard-Industry</p>";
             $message .= "</body></html>";
 
             // Envoyer l'e-mail
