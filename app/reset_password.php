@@ -110,7 +110,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <div class="row justify-content-center">
             <div class="col-md-6">
                 <div class="card p-4 shadow-sm">
-                    <h2 class="mb-4">Réinitialisez votre mot de passe</h2>
+                    <h2 class="mb-4">Réinitialisation du mot de passe</h2>
                     <?php
                     if (isset($error_message)) {
                         echo "<div class='alert alert-danger alert-dismissible fade show mt-2 mb-4' role='alert'>
@@ -132,7 +132,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             </div>
                         </div>
                         <div class="form-group mb-4">
-                            <label for="password_repeat">Répéter le mot de passe</label>
+                            <label for="password_repeat">Répétez le nouveau mot de passe</label>
                             <input type="password" class="form-control" id="password_repeat" name="password_repeat"
                                 required>
                             <div class="invalid-feedback">

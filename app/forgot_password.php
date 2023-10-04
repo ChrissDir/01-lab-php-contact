@@ -118,7 +118,7 @@ function resetPassword($email) {
         <div class="col-md-8">
             <div class="card p-4">
                 <div class="d-flex justify-content-between mb-4">
-                    <h2>Réinitialiser votre mot de passe</h2>
+                    <h2>Réinitialisation du mot de passe</h2>
                     <a href="index.php" class="btn btn-secondary align-self-start">Retour</a>
                 </div>
                 <form action="forgot_password.php" method="POST">
@@ -131,7 +131,7 @@ function resetPassword($email) {
                     if (!empty($message)) {
                         echo "<div class='alert-info'>$message</div>";
                     } ?>
-                    <button type="submit" class="btn btn-primary">Réinitialiser le mot de passe</button>
+                    <button type="submit" class="btn btn-primary">Envoyer</button>
                 </form>
             </div>
         </div>
